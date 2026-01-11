@@ -380,13 +380,16 @@ function handleCanvasMouseDown(e) {
     state.drawingColor = hexColor;
     elements.brushColorPicker.value = hexColor;
 
-    // Switch back to pencil tool
-    state.selectionTool = 'pencil';
-    const pencilBtn = document.querySelector('.tool-btn[data-tool="pencil"]');
-    if(pencilBtn) updateActiveTool(pencilBtn);
-    // Set pencil cursor after switching back
-    setPencilCursor();
-    updateStatusBar(`Tool: ${state.selectionTool}`);
+    // Only switch back to pencil if NOT holding Alt key
+    if (!state.altKeyDown) {
+      state.selectionTool = 'pencil';
+      const pencilBtn = document.querySelector('.tool-btn[data-tool="pencil"]');
+      if(pencilBtn) updateActiveTool(pencilBtn);
+      setPencilCursor();
+      updateStatusBar(`Tool: ${state.selectionTool}`);
+    } else {
+      updateStatusBar(`Color: ${hexColor} (Alt)`);
+    }
     return;
   }
 
