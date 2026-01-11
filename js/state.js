@@ -64,6 +64,7 @@ export const elements = {
   brushSizeSlider: document.getElementById('brushSizeSlider'),
   brushSizeValue: document.getElementById('brushSizeValue'),
   brushColorPicker: document.getElementById('brushColorPicker'),
+  swatchColorPicker: document.getElementById('swatchColorPicker'),
   eraserSizeSlider: document.getElementById('eraserSizeSlider'),
   eraserSizeValue: document.getElementById('eraserSizeValue'),
   symmetryBtn: document.getElementById('symmetryBtn'),

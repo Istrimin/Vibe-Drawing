@@ -32,6 +32,9 @@ function setupUI() {
 
 // EVENT HANDLERS
 function setupEventListeners() {
+  // Global variable for last selected swatch color - declare FIRST
+  let lastSwatchColor = '#ffffff';
+
   // Canvas events
   elements.canvas.addEventListener('mousedown', handleCanvasMouseDown);
   elements.canvas.addEventListener('mousemove', handleCanvasMouseMove);
@@ -69,17 +72,6 @@ function setupEventListeners() {
     state.gridColor = e.target.value;
     redrawCanvas();
   });
-  // Right-click to assign color from palette
-  elements.gridColorPicker.addEventListener('mousedown', (e) => {
-    if (e.button === 2) { // Right click
-      e.preventDefault();
-      e.stopPropagation();
-      elements.gridColorPicker.value = lastSwatchColor;
-      state.gridColor = lastSwatchColor;
-      redrawCanvas();
-      updateStatusBar(`Grid color: ${lastSwatchColor}`);
-    }
-  });
   elements.gridSizeInput.addEventListener('input', (e) => {
     state.gridSize = parseInt(e.target.value, 10);
     redrawCanvas();
@@ -93,28 +85,6 @@ function setupEventListeners() {
     state.backgroundColor = e.target.value;
     redrawCanvas();
   });
-  // Right-click to assign color from palette
-  elements.backgroundColorPicker.addEventListener('mousedown', (e) => {
-    if (e.button === 2) { // Right click
-      e.preventDefault();
-      e.stopPropagation();
-      elements.backgroundColorPicker.value = lastSwatchColor;
-      state.backgroundColor = lastSwatchColor;
-      redrawCanvas();
-      updateStatusBar(`Background color: ${lastSwatchColor}`);
-    }
-  });
-  // Global variable for last selected swatch color
-  let lastSwatchColor = '#ffffff';
-
-  // Prevent context menu on color pickers (global capture)
-  document.addEventListener('contextmenu', (e) => {
-    if (e.target.tagName === 'INPUT' && e.target.type === 'color') {
-      e.preventDefault();
-      e.stopPropagation();
-      return false;
-    }
-  }, true); // Use capture phase
 
   // Brush/Eraser size sliders
   elements.brushSizeSlider.addEventListener('input', (e) => {
@@ -135,16 +105,6 @@ function setupEventListeners() {
     // Remove active class from color swatches when using native picker
     elements.colorPalette.querySelectorAll('.color-swatch').forEach(btn => btn.classList.remove('active'));
   });
-  // Right-click to assign color from palette
-  elements.brushColorPicker.addEventListener('mousedown', (e) => {
-    if (e.button === 2) { // Right click
-      e.preventDefault();
-      e.stopPropagation();
-      elements.brushColorPicker.value = lastSwatchColor;
-      state.drawingColor = lastSwatchColor;
-      updateStatusBar(`Palette color: ${lastSwatchColor}`);
-    }
-  });
 
   // Color Palette
   elements.colorPalette.addEventListener('click', (e) => {
@@ -161,6 +121,38 @@ function setupEventListeners() {
       // elements.brushColorPicker.value = color;
       updateStatusBar(`Color: ${color}`);
     }
+  });
+
+  // Right-click on color swatch opens browser color picker
+  let currentSwatchElement = null;
+  elements.colorPalette.addEventListener('contextmenu', (e) => {
+    if (e.target.classList.contains('color-swatch')) {
+      e.preventDefault();
+      currentSwatchElement = e.target;
+      const color = e.target.dataset.color;
+      elements.swatchColorPicker.value = color;
+      elements.swatchColorPicker.click(); // Opens native color picker
+    }
+  });
+
+  // Handle color selection from hidden picker
+  elements.swatchColorPicker.addEventListener('input', (e) => {
+    const color = e.target.value;
+    state.drawingColor = color;
+    lastSwatchColor = color;
+    elements.brushColorPicker.value = color;
+    
+    // Update the swatch that triggered the picker
+    if (currentSwatchElement) {
+      currentSwatchElement.dataset.color = color;
+      currentSwatchElement.style.backgroundColor = color;
+      currentSwatchElement.classList.add('active');
+      elements.colorPalette.querySelectorAll('.color-swatch').forEach(btn => {
+        if (btn !== currentSwatchElement) btn.classList.remove('active');
+      });
+    }
+    
+    updateStatusBar(`Color: ${color}`);
   });
 
   // Main menu toggle
