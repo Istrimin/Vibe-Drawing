@@ -15,6 +15,7 @@ function init() {
   setupCursorKeyboardShortcuts();
   setupUI();
   loadState();
+  saveStateToUndoStack(); // Save initial blank canvas state for undo
   updateStatusBar('Ready');
 }
 
