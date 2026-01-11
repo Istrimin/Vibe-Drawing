@@ -368,7 +368,13 @@ function handleCanvasMouseDown(e) {
   if (e.button !== 0) return; // All other actions are for left-click only
 
   if (state.selectionTool === 'color-picker') {
-    const pixelData = elements.canvas.getContext('2d').getImageData(e.clientX, e.clientY, 1, 1).data;
+    // getMousePosition returns world coordinates (with pan/zoom applied)
+    // But getImageData needs canvas coordinates (before transform)
+    // Convert: canvasX = worldX * zoomLevel + panOffset.x
+    const canvasX = pos.x * state.zoomLevel + state.panOffset.x;
+    const canvasY = pos.y * state.zoomLevel + state.panOffset.y;
+    
+    const pixelData = elements.canvas.getContext('2d').getImageData(canvasX, canvasY, 1, 1).data;
     const hexColor = "#" + ("000000" + ((pixelData[0] << 16) | (pixelData[1] << 8) | pixelData[2]).toString(16)).slice(-6);
     
     state.drawingColor = hexColor;
@@ -618,10 +624,19 @@ function handleFileUpload(e) {
 function pickColorFromCanvas(e) {
   try {
     const rect = elements.canvas.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
+    // Convert screen coordinates to canvas coordinates
+    const screenX = e.clientX - rect.left;
+    const screenY = e.clientY - rect.top;
     
-    const pixelData = elements.canvas.getContext('2d').getImageData(x, y, 1, 1).data;
+    // Convert to world coordinates using getMousePosition logic
+    const worldX = (screenX - state.panOffset.x) / state.zoomLevel;
+    const worldY = (screenY - state.panOffset.y) / state.zoomLevel;
+    
+    // Convert back to canvas coordinates for getImageData
+    const canvasX = worldX * state.zoomLevel + state.panOffset.x;
+    const canvasY = worldY * state.zoomLevel + state.panOffset.y;
+    
+    const pixelData = elements.canvas.getContext('2d').getImageData(canvasX, canvasY, 1, 1).data;
     const hexColor = "#" + ("000000" + ((pixelData[0] << 16) | (pixelData[1] << 8) | pixelData[2]).toString(16)).slice(-6);
     return hexColor;
   } catch (err) {
