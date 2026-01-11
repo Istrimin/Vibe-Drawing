@@ -36,6 +36,7 @@ export const state = {
   isRightClickErasing: false,
   gridCells: [],
   lastGridCell: { x: null, y: null },
+  lastGridMousePos: { x: null, y: null },
   selectionPath: [],
   selectedObjects: [],
   isMovingSelection: false,

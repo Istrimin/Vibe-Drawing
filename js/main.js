@@ -4,7 +4,7 @@ import { updateActiveTool, updateStatusBar, toggleGrid, showDevTools } from './u
 
 import { floodFill } from './fill.js';
 import { initCursors, setupCursorKeyboardShortcuts, setPipetteCursor, setPencilCursor, setEraserCursor, resetCursor } from './cursors.js';
-import { getPathBoundingBox, doRectanglesIntersect } from './geometry.js';
+import { getPathBoundingBox, doRectanglesIntersect, getCellsBetweenPoints } from './geometry.js';
 
 // --- Functions that were in script.js ---
 
@@ -327,13 +327,14 @@ function handleCanvasMouseDown(e) {
     // Save state BEFORE making changes for proper undo
     saveStateToUndoStack();
     const gridSize = state.gridSize;
-    const cellX = Math.floor(pos.x / gridSize) * gridSize;
-    const cellY = Math.floor(pos.y / gridSize) * gridSize;
 
-    // Store the last grid cell for continuous drawing/erasing
-    state.lastGridCell = { x: cellX, y: cellY };
+    // Store the last mouse position for interpolation
+    state.lastGridMousePos = { x: pos.x, y: pos.y };
+    state.lastGridCell = { x: Math.floor(pos.x / gridSize) * gridSize, y: Math.floor(pos.y / gridSize) * gridSize };
 
     if (e.button === 0) { // Left-click to fill grid cell
+      const cellX = state.lastGridCell.x;
+      const cellY = state.lastGridCell.y;
       const existingCellIndex = state.gridCells.findIndex(cell => cell.x === cellX && cell.y === cellY);
       if (existingCellIndex !== -1) {
           state.gridCells[existingCellIndex].color = state.drawingColor;
@@ -342,9 +343,11 @@ function handleCanvasMouseDown(e) {
       }
     } else if (e.button === 2) { // Right-click to erase grid cell
       state.isRightClickErasing = true; // Flag for continuous erasing
+      const cellX = state.lastGridCell.x;
+      const cellY = state.lastGridCell.y;
       state.gridCells = state.gridCells.filter(cell => !(cell.x === cellX && cell.y === cellY));
     }
-    
+
     redrawCanvas();
     return;
   }
@@ -452,21 +455,35 @@ function handleCanvasMouseMove(e) {
     // Grid Draw continuous
     if (state.selectionTool === 'grid-draw') {
         const gridSize = state.gridSize;
-        const cellX = Math.floor(pos.x / gridSize) * gridSize;
-        const cellY = Math.floor(pos.y / gridSize) * gridSize;
 
-        if (cellX !== state.lastGridCell.x || cellY !== state.lastGridCell.y) {
-            if (e.buttons === 1) { // Left mouse button (fill)
-                const existingCellIndex = state.gridCells.findIndex(cell => cell.x === cellX && cell.y === cellY);
-                if (existingCellIndex !== -1) {
-                    state.gridCells[existingCellIndex].color = state.drawingColor;
-                } else {
-                    state.gridCells.push({ x: cellX, y: cellY, color: state.drawingColor });
+        // Use interpolation between last mouse position and current position
+        // to fill all cells that the mouse passed through
+        if (state.lastGridMousePos && (state.lastGridMousePos.x !== pos.x || state.lastGridMousePos.y !== pos.y)) {
+            // Get all cells between last position and current position
+            const cells = getCellsBetweenPoints(
+                state.lastGridMousePos.x,
+                state.lastGridMousePos.y,
+                pos.x,
+                pos.y,
+                gridSize
+            );
+
+            for (const cell of cells) {
+                if (e.buttons === 1) { // Left mouse button (fill)
+                    const existingCellIndex = state.gridCells.findIndex(c => c.x === cell.x && c.y === cell.y);
+                    if (existingCellIndex !== -1) {
+                        state.gridCells[existingCellIndex].color = state.drawingColor;
+                    } else {
+                        state.gridCells.push({ x: cell.x, y: cell.y, color: state.drawingColor });
+                    }
+                } else if (e.buttons === 2) { // Right mouse button (erase)
+                    state.gridCells = state.gridCells.filter(c => !(c.x === cell.x && c.y === cell.y));
                 }
-            } else if (e.buttons === 2) { // Right mouse button (erase)
-                state.gridCells = state.gridCells.filter(cell => !(cell.x === cellX && cell.y === cellY));
             }
-            state.lastGridCell = { x: cellX, y: cellY };
+
+            // Update last cell to the current cell
+            state.lastGridCell = { x: Math.floor(pos.x / gridSize) * gridSize, y: Math.floor(pos.y / gridSize) * gridSize };
+            state.lastGridMousePos = { x: pos.x, y: pos.y };
             redrawCanvas();
         }
         return;
@@ -653,7 +670,7 @@ function pickColorFromCanvas(e) {
     // Convert to world coordinates using getMousePosition logic
     const worldX = (screenX - state.panOffset.x) / state.zoomLevel;
     const worldY = (screenY - state.panOffset.y) / state.zoomLevel;
-    
+
     // Convert back to canvas coordinates for getImageData
     const canvasX = worldX * state.zoomLevel + state.panOffset.x;
     const canvasY = worldY * state.zoomLevel + state.panOffset.y;

@@ -22,7 +22,7 @@ export function resizeCanvas() {
 
 export function zoom(factor, mouseX, mouseY) {
   const oldZoom = state.zoomLevel;
-  state.zoomLevel = Math.max(1e-6, Math.min(1e6, state.zoomLevel * factor));
+  state.zoomLevel = Math.max(1e-6, state.zoomLevel * factor); // Removed upper limit, kept very small lower limit
 
   const rect = elements.canvas.getBoundingClientRect();
   const centerX = mouseX ?? rect.width / 2;
@@ -31,7 +31,7 @@ export function zoom(factor, mouseX, mouseY) {
   state.panOffset.x = centerX - (centerX - state.panOffset.x) * (state.zoomLevel / oldZoom);
   state.panOffset.y = centerY - (centerY - state.panOffset.y) * (state.zoomLevel / oldZoom);
 
-  redrawCanvas();
+ redrawCanvas();
   updateStatusBar(`Zoom: ${Math.round(state.zoomLevel * 100)}%`);
 }
 

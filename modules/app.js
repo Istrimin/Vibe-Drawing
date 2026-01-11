@@ -61,12 +61,12 @@ function setupEventListeners() {
   // Toolbar buttons
   elements.zoomInBtn.addEventListener('click', () => {
     const newZoom = Canvas.zoom(1.2);
-    UI.updateStatusBar(`Zoom: ${Math.round(newZoom * 100)}%`);
+    UI.updateStatusBar(`Zoom: ${Math.round(newZoom)}%`);
   });
 
   elements.zoomOutBtn.addEventListener('click', () => {
     const newZoom = Canvas.zoom(0.8);
-    UI.updateStatusBar(`Zoom: ${Math.round(newZoom * 100)}%`);
+    UI.updateStatusBar(`Zoom: ${Math.round(newZoom)}%`);
   });
 
   elements.zoomResetBtn.addEventListener('click', () => {
@@ -228,7 +228,7 @@ function handleCanvasWheel(e) {
   e.preventDefault();
   const delta = e.deltaY > 0 ? 0.9 : 1.1;
   const newZoom = Canvas.zoom(delta);
-  UI.updateStatusBar(`Zoom: ${Math.round(newZoom * 100)}%`);
+  UI.updateStatusBar(`Zoom: ${Math.round(newZoom)}%`);
 }
 
 // Handle file upload

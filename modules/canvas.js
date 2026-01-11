@@ -85,9 +85,9 @@ function drawGrid() {
 // Zoom functionality
 function zoom(factor) {
   const oldZoom = canvasState.zoomLevel;
-  canvasState.zoomLevel = Math.max(0.1, Math.min(10, canvasState.zoomLevel * factor));
+ canvasState.zoomLevel = Math.max(1e-6, canvasState.zoomLevel * factor); // Removed upper limit, kept very small lower limit
 
-  // Adjust pan offset to zoom around center
+ // Adjust pan offset to zoom around center
   const rect = canvasState.canvas.getBoundingClientRect();
   const centerX = rect.width / 2;
   const centerY = rect.height / 2;
@@ -96,13 +96,12 @@ function zoom(factor) {
   canvasState.panOffset.y = centerY - (centerY - canvasState.panOffset.y) * (canvasState.zoomLevel / oldZoom);
 
   redrawCanvas();
-  return canvasState.zoomLevel;
+  return canvasState.zoomLevel * 100;
 }
 
 // Reset zoom
 function resetZoom() {
-  const zoomFactor = 1 / canvasState.zoomLevel;
-  zoom(zoomFactor);
+  zoom(1 / canvasState.zoomLevel);
 }
 
 // Toggle grid visibility
@@ -148,7 +147,7 @@ function getCanvasState() {
 
 // Set canvas state
 function setCanvasState(state) {
-  canvasState.zoomLevel = state.zoomLevel || 1;
+  canvasState.zoomLevel = state.zoomLevel !== undefined ? state.zoomLevel : 1;
   canvasState.panOffset = state.panOffset || { x: 0, y: 0 };
   canvasState.showGrid = state.showGrid !== undefined ? state.showGrid : true;
 }
