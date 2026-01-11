@@ -28,7 +28,7 @@ function setupUI() {
     setPencilCursor();
   } else if (state.selectionTool === 'eraser') {
     setEraserCursor();
-  } else if (state.selectionTool === 'color-picker') {
+  } else if (state.selectionTool === 'pipette') {
     setPipetteCursor();
   } else if (state.selectionTool === 'grid-draw') {
     elements.canvas.style.cursor = 'crosshair';
@@ -268,7 +268,7 @@ function setupEventListeners() {
         setPencilCursor();
       } else if (state.selectionTool === 'eraser') {
         setEraserCursor();
-      } else if (state.selectionTool === 'color-picker') {
+      } else if (state.selectionTool === 'pipette') {
         setPipetteCursor();
       } else if (state.selectionTool === 'grid-draw') {
         // Grid draw tool - use a crosshair cursor
@@ -367,7 +367,7 @@ function handleCanvasMouseDown(e) {
   
   if (e.button !== 0) return; // All other actions are for left-click only
 
-  if (state.selectionTool === 'color-picker') {
+  if (state.selectionTool === 'pipette') {
     // getMousePosition returns world coordinates (with pan/zoom applied)
     // But getImageData needs canvas coordinates (before transform)
     // Convert: canvasX = worldX * zoomLevel + panOffset.x
@@ -662,9 +662,9 @@ function handleKeyDown(e) {
     e.preventDefault();
     state.altKeyDown = true;
     // Store current tool if not already in pipette mode
-    if (state.selectionTool !== 'color-picker') {
+    if (state.selectionTool !== 'pipette') {
       state.previousTool = state.selectionTool;
-      state.selectionTool = 'color-picker';
+      state.selectionTool = 'pipette';
     }
     // Set pipette cursor
     setPipetteCursor();
@@ -711,7 +711,7 @@ function handleKeyUp(e) {
       setPencilCursor();
     } else if (state.selectionTool === 'eraser') {
       setEraserCursor();
-    } else if (state.selectionTool === 'color-picker') {
+    } else if (state.selectionTool === 'pipette') {
       setPipetteCursor();
     } else if (state.selectionTool === 'grid-draw') {
       elements.canvas.style.cursor = 'crosshair';

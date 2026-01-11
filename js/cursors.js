@@ -288,7 +288,7 @@ export function getCursorForTool(tool) {
             return 'url(cursors/pencil.png) 0 0, auto';
         case 'eraser':
             return 'url(cursors/eraser.png) 0 0, auto';
-        case 'color-picker':
+        case 'pipette':
             return 'url(cursors/pipette32.png) 0 0, auto';
         default:
             return 'auto';
