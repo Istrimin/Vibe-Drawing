@@ -52,7 +52,13 @@ function setupEventListeners() {
   elements.canvas.addEventListener('mousedown', handleCanvasMouseDown);
   elements.canvas.addEventListener('mousemove', handleCanvasMouseMove);
   elements.canvas.addEventListener('mouseup', handleCanvasMouseUp);
-  elements.canvas.addEventListener('mouseleave', handleCanvasMouseUp);
+  elements.canvas.addEventListener('mouseleave', (e) => {
+    handleCanvasMouseUp(e);
+    // Also reset cursor on mouseleave
+    if (!state.spacebarDown) {
+      resetCursor();
+    }
+  });
   elements.canvas.addEventListener('wheel', handleCanvasWheel, { passive: false });
   elements.canvas.addEventListener('contextmenu', (e) => e.preventDefault());
 

@@ -1,26 +1,4 @@
-# TODO List
-
-- [ ] ## 0. Добавить историю действий (Undo/Redo) + Playback
-  - **Description**: Add full history of actions to allow stepping backward and forward, plus video-like playback of the entire drawing process with speed control and timeline scrubber.
-  - **Implementation**:
-    - Implement a stack-based history system in `js/history.js`.
-    - Add `undo()` and `redo()` functions.
-    - Store all canvas actions (drawings, selections, modifications) in history.
-    - Add UI buttons for undo/redo in the toolbar.
-    - Limit history size to prevent memory issues (e.g., max 50 states).
-    - **Playback Feature**:
-      - Add a "Play Timeline" button in the UI.
-      - Create a playback controls overlay with:
-        - Play/Pause button
-        - Stop button
-        - **Speed slider** (0.25x to 4x speed)
-        - **Timeline scrubber/slider** - drag to jump to any point in the drawing process
-        - Current frame / Total frames display
-      - Use `setInterval` or `requestAnimationFrame` to cycle through all saved history states.
-      - Display each state sequentially like a video playback.
-      - Allow scrubbing through the timeline by dragging the slider.
-      - Visual indicator of playback progress on the timeline.
-  - **Files to edit**: `js/history.js`, `js/main.js`, `js/canvas.js`, `index.html`, `style.css`
+# Новый файл - TODO List
 
 - [ ] ## 1. Добавить линию симметрии
   - **Description**: Add a visual symmetry line (axis) that can be toggled on/off.
