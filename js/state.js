@@ -17,8 +17,6 @@ export const state = {
   panOffset: { x: 0, y: 0 },
   isPanning: false,
   panStart: { x: 0, y: 0 },
-  activeLayer: 0,
-  layers: [{ name: 'Layer 1', visible: true }],
   undoStack: [],
   redoStack: [],
   isDrawing: false,
@@ -54,9 +52,8 @@ export const elements = {
   zoomOutBtn: document.getElementById('zoomOutBtn'),
   zoomResetBtn: document.getElementById('fitBtn'),
   toolButtons: document.querySelectorAll('.tool-btn'),
-  layerList: document.getElementById('layersList'),
-  addLayerBtn: document.getElementById('addLayerBtn'),
   saveBtn: document.getElementById('saveBtn'),
+
   loadBtn: document.getElementById('loadBtn'),
   uploadBtn: document.getElementById('uploadBtn'),
   zoomLevelDisplay: document.getElementById('zoomLevel'),
@@ -75,14 +72,13 @@ export const elements = {
   colorPalette: document.getElementById('colorPalette'),
   app: document.getElementById('app'),
   togglePanelsBtn: document.getElementById('toggle-panels-btn'),
-  layersPanel: document.getElementById('layersPanel'),
-  toggleLayersBtn: document.getElementById('toggle-layers-btn'),
   mainMenu: document.getElementById('main-menu'),
   toggleTopToolbarCb: document.getElementById('toggle-top-toolbar-cb'),
+
   toggleLeftToolbarCb: document.getElementById('toggle-left-toolbar-cb'),
   toggleRightToolbarCb: document.getElementById('toggle-right-toolbar-cb'),
-  toggleLayersCb: document.getElementById('toggle-layers-cb'),
   symmetryPanel: document.getElementById('symmetry-panel'),
+
   symmetryModeBtns: document.querySelectorAll('.symmetry-mode-btn'),
   radialRayCountContainer: document.getElementById('radial-ray-count-container'),
   radialRayCountInput: document.getElementById('radial-ray-count')

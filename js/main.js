@@ -1,6 +1,7 @@
 import { state, elements } from './state.js';
 import { setupCanvas, redrawCanvas, zoom } from './canvas.js';
-import { updateLayerList, updateActiveTool, updateStatusBar, toggleGrid, showDevTools } from './ui.js';
+import { updateActiveTool, updateStatusBar, toggleGrid, showDevTools } from './ui.js';
+
 import { floodFill } from './fill.js';
 import { initCursors, setupCursorKeyboardShortcuts, setPipetteCursor, setPencilCursor, setEraserCursor, resetCursor } from './cursors.js';
 import { getPathBoundingBox, doRectanglesIntersect } from './geometry.js';
@@ -20,8 +21,9 @@ function init() {
 
 // Setup UI
 function setupUI() {
-  updateLayerList();
   updateActiveTool(document.querySelector('.tool-btn.active'));
+
+
   
   // Set initial cursor based on default tool
   if (state.selectionTool === 'pencil') {
@@ -62,7 +64,6 @@ function setupEventListeners() {
   elements.zoomInBtn.addEventListener('click', () => zoom(1.2));
   elements.zoomOutBtn.addEventListener('click', () => zoom(0.8));
   elements.zoomResetBtn.addEventListener('click', () => zoom(1));
-  elements.addLayerBtn.addEventListener('click', addLayer);
   elements.saveBtn.addEventListener('click', saveState);
   elements.loadBtn.addEventListener('click', loadState);
 
@@ -188,16 +189,6 @@ function setupEventListeners() {
   });
   elements.toggleRightToolbarCb.addEventListener('change', (e) => {
     elements.app.classList.toggle('right-toolbar-hidden', !e.target.checked);
-  });
-  elements.toggleLayersCb.addEventListener('change', (e) => {
-    elements.layersPanel.classList.toggle('hidden', !e.target.checked);
-  });
-
-
-  // Layers panel toggle button (syncs with checkbox)
-  elements.toggleLayersBtn.addEventListener('click', () => {
-      const isHidden = elements.layersPanel.classList.toggle('hidden');
-      elements.toggleLayersCb.checked = !isHidden;
   });
 
   // Symmetry panel logic
@@ -801,8 +792,7 @@ function uploadImages(files) {
             src: e.target.result,
             x: 100, y: 100,
             width: img.width, height: img.height,
-            rotation: 0,
-            layer: state.activeLayer
+            rotation: 0
           };
           state.images.push(imageData);
           saveStateToUndoStack();
@@ -825,7 +815,6 @@ export function getImageFromData(src) {
 function getImageAtPosition(x, y) {
   for (let i = state.images.length - 1; i >= 0; i--) {
     const img = state.images[i];
-    if (img.layer !== state.activeLayer) continue;
     if (x >= img.x && x <= img.x + img.width && y >= img.y && y <= img.y + img.height) {
       return img;
     }
@@ -870,18 +859,10 @@ function getMousePosition(e) {
   };
 }
 
-// LAYERS
-function addLayer() {
-  const layerName = `Layer ${state.layers.length + 1}`;
-  state.layers.push({ name: layerName, visible: true });
-  state.activeLayer = state.layers.length - 1;
-  updateLayerList();
-  saveStateToUndoStack();
-}
 
 // HISTORY
 function saveStateToUndoStack() {
-  const stateCopy = JSON.parse(JSON.stringify({ images: state.images, activeLayer: state.activeLayer, drawingPaths: state.drawingPaths, gridCells: state.gridCells }));
+  const stateCopy = JSON.parse(JSON.stringify({ images: state.images, drawingPaths: state.drawingPaths, gridCells: state.gridCells }));
   state.undoStack.push(stateCopy);
   state.redoStack = [];
   if (state.undoStack.length > 50) {
@@ -891,11 +872,10 @@ function saveStateToUndoStack() {
 
 function undo() {
   if (state.undoStack.length > 0) {
-    const currentState = { images: state.images, activeLayer: state.activeLayer, drawingPaths: state.drawingPaths, gridCells: state.gridCells };
+    const currentState = { images: state.images, drawingPaths: state.drawingPaths, gridCells: state.gridCells };
     state.redoStack.push(currentState);
     const previousState = state.undoStack.pop();
     state.images = previousState.images;
-    state.activeLayer = previousState.activeLayer;
     state.drawingPaths = previousState.drawingPaths || [];
     state.gridCells = previousState.gridCells || [];
     redrawCanvas();
@@ -905,11 +885,10 @@ function undo() {
 
 function redo() {
   if (state.redoStack.length > 0) {
-    const currentState = { images: state.images, activeLayer: state.activeLayer, drawingPaths: state.drawingPaths, gridCells: state.gridCells };
+    const currentState = { images: state.images, drawingPaths: state.drawingPaths, gridCells: state.gridCells };
     state.undoStack.push(currentState);
     const nextState = state.redoStack.pop();
     state.images = nextState.images;
-    state.activeLayer = nextState.activeLayer;
     state.drawingPaths = nextState.drawingPaths || [];
     state.gridCells = nextState.gridCells || [];
     redrawCanvas();
@@ -921,8 +900,6 @@ function redo() {
 function saveState() {
   const stateToSave = {
     images: state.images,
-    layers: state.layers,
-    activeLayer: state.activeLayer,
     drawingPaths: state.drawingPaths,
     gridCells: state.gridCells
   };
@@ -935,11 +912,8 @@ function loadState() {
   if (savedState) {
     const parsedState = JSON.parse(savedState);
     state.images = parsedState.images || [];
-    state.layers = parsedState.layers || [{ name: 'Layer 1', visible: true }];
-    state.activeLayer = parsedState.activeLayer || 0;
     state.drawingPaths = parsedState.drawingPaths || [];
     state.gridCells = parsedState.gridCells || [];
-    updateLayerList();
     redrawCanvas();
     updateStatusBar('State loaded');
   }
@@ -953,7 +927,6 @@ function exportAsImage() {
     let maxX = -Infinity, maxY = -Infinity;
 
     state.images.forEach(img => {
-        if (img.layer !== state.activeLayer) return;
         minX = Math.min(minX, img.x);
         minY = Math.min(minY, img.y);
         maxX = Math.max(maxX, img.x + img.width);
@@ -969,7 +942,6 @@ function exportAsImage() {
     tempCanvas.height = maxY - minY;
 
     state.images.forEach(img => {
-        if (img.layer !== state.activeLayer) return;
         tempCtx.save();
         tempCtx.translate(img.x - minX + img.width / 2, img.y - minY + img.height / 2);
         tempCtx.rotate(img.rotation);

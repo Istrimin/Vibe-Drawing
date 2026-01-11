@@ -10,30 +10,7 @@ export function updateStatusBar(message) {
   elements.statusBar.textContent = message;
 }
 
-export function updateLayerList() {
-  elements.layerList.innerHTML = '';
-  state.layers.forEach((layer, index) => {
-    const layerItem = document.createElement('div');
-    layerItem.className = `layer-item ${index === state.activeLayer ? 'active' : ''}`;
-    layerItem.innerHTML = `
-      <span>${layer.name}</span>
-      <input type="checkbox" ${layer.visible ? 'checked' : ''} data-index="${index}">
-    `;
-    layerItem.addEventListener('click', () => {
-      state.activeLayer = index;
-      updateLayerList();
-      redrawCanvas();
-    });
 
-    const checkbox = layerItem.querySelector('input');
-    checkbox.addEventListener('change', (e) => {
-      layer.visible = e.target.checked;
-      redrawCanvas();
-    });
-
-    elements.layerList.appendChild(layerItem);
-  });
-}
 
 export function toggleGrid() {
   state.showGrid = !state.showGrid;
@@ -73,8 +50,6 @@ export function showDevTools() {
         <p><strong>State:</strong></p>
         <p>Images: ${state.images.length}</p>
         <p>Drawing paths: ${state.drawingPaths.length}</p>
-        <p>Layers: ${state.layers.length}</p>
-        <p>Active layer: ${state.activeLayer + 1}</p>
         <p>Zoom: ${Math.round(state.zoomLevel * 100)}%</p>
         <p>Pan: X: ${Math.round(state.panOffset.x)}, Y: ${Math.round(state.panOffset.y)}</p>
         <p>Grid: ${state.showGrid ? 'Visible' : 'Hidden'}</p>

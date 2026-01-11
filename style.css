@@ -35,8 +35,7 @@ html, body {
 
 #app.top-toolbar-hidden .canvas-container { top: 0; }
 #app.left-toolbar-hidden .canvas-container { left: 0; }
-#app.right-toolbar-hidden .canvas-container { right: 60px; } /* Keep space for layers */
-#app.right-toolbar-hidden.layers-panel-hidden .canvas-container { right: 0; }
+#app.right-toolbar-hidden .canvas-container { right: 0; }
 
 
 /* Canvas */
@@ -162,49 +161,6 @@ html, body {
     border-radius: 3px; width: 40px; padding: 2px; text-align: center;
 }
 input#gridColorPicker { width: 30px; height: 30px; }
-
-
-/* --- LAYERS PANEL --- */
-#layersPanel {
-    position: absolute;
-    top: 50px;
-    right: 70px;
-    width: 200px;
-    background: rgba(30, 30, 30, 0.6);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    padding: 8px;
-    border-radius: 8px;
-    z-index: 999; /* Below main toolbars */
-    transition: all 0.3s ease;
-    overflow-y: auto;
-    max-height: calc(100vh - 70px);
-}
-#layersPanel.hidden {
-    transform: translateX(120%);
-    opacity: 0;
-    pointer-events: none;
-}
-#layersPanel h3 {
-    font-size: 11px; text-transform: uppercase; color: #999;
-    text-align: center; margin-bottom: 5px; padding-bottom: 5px;
-    border-bottom: 1px solid #333;
-}
-.layer-actions { margin-bottom: 5px; }
-#addLayerBtn {
-    width: 100%; padding: 6px; border: none; background-color: rgba(255, 255, 255, 0.08);
-    color: #e0e0e0; cursor: pointer; border-radius: 4px;
-    font-size: 12px; transition: background-color 0.15s ease;
-}
-#addLayerBtn:hover { background-color: rgba(255, 255, 255, 0.15); }
-#layersList { list-style: none; overflow-y: auto; max-height: 200px; }
-#layersList li {
-    padding: 6px; font-size: 12px; cursor: pointer; border-radius: 4px;
-    margin-bottom: 2px; border: 1px solid transparent;
-}
-#layersList li:hover { background-color: #333; }
-#layersList li.active { color: #7b61ff; font-weight: 600; border-color: #7b61ff; background: transparent; }
 
 
 /* --- PANEL & MENU TOGGLING --- */
@@ -448,4 +404,53 @@ input[type="color"]::-webkit-color-swatch-wrapper {
 }
 input[type="color"]::-webkit-color-swatch {
     pointer-events: auto;
+}
+
+/* --- EXPORT PANEL --- */
+#export-panel {
+    position: absolute;
+    top: 50px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #2a2a2a;
+    border: 1px solid #333;
+    border-radius: 8px;
+    z-index: 2005;
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+}
+#export-panel.hidden {
+    display: none;
+}
+#export-panel h4 {
+    text-align: center;
+    font-size: 11px;
+    text-transform: uppercase;
+    color: #999;
+    margin: 0 0 5px 0;
+}
+.export-options {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+.export-format-btn {
+    padding: 8px 16px;
+    border: 1px solid #444;
+    background: #333;
+    color: #ccc;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 13px;
+}
+.export-format-btn:hover {
+    background: #444;
+}
+.export-format-btn.active {
+    background: #7b61ff;
+    border-color: #7b61ff;
+    color: white;
 }
