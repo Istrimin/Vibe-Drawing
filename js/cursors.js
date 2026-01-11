@@ -235,3 +235,16 @@ export function setupCursorKeyboardShortcuts() {
 export function getCurrentCursor() {
     return cursorState.currentCursor;
 }
+
+// Set pipette cursor for Alt key functionality
+export function setPipetteCursor() {
+    const pipetteCursor = 'url(cursors/pipette32.png) 0 0, auto';
+    setCursor(pipetteCursor);
+}
+
+// Reset cursor to default
+export function resetCursor() {
+    if (drawingCanvas) {
+        drawingCanvas.style.cursor = cursorState.currentCursor;
+    }
+}

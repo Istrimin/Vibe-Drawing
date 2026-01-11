@@ -32,6 +32,8 @@ export const state = {
   gridColor: '#006400',
   backgroundColor: '#2d2d2d',
   spacebarDown: false,
+  altKeyDown: false,
+  previousTool: 'pencil',
   symmetry: new Symmetry(),
   isRightClickErasing: false,
   gridCells: [],

@@ -1,8 +1,8 @@
- import { state, elements } from './state.js';
+import { state, elements } from './state.js';
 import { setupCanvas, redrawCanvas, zoom } from './canvas.js';
 import { updateLayerList, updateActiveTool, updateStatusBar, toggleGrid, showDevTools } from './ui.js';
 import { floodFill } from './fill.js';
-import { initCursors, setupCursorKeyboardShortcuts } from './cursors.js';
+import { initCursors, setupCursorKeyboardShortcuts, setPipetteCursor, resetCursor } from './cursors.js';
 import { getPathBoundingBox, doRectanglesIntersect } from './geometry.js';
 
 // --- Functions that were in script.js ---
@@ -612,6 +612,21 @@ function handleKeyDown(e) {
       elements.canvas.style.cursor = 'grab';
     }
   }
+  
+  // Alt key - temporarily activate pipette tool with pipette cursor
+  if (e.key === 'Alt' && !state.altKeyDown) {
+    e.preventDefault();
+    state.altKeyDown = true;
+    // Store current tool if not already in pipette mode
+    if (state.selectionTool !== 'color-picker') {
+      state.previousTool = state.selectionTool;
+      state.selectionTool = 'color-picker';
+    }
+    // Set pipette cursor
+    setPipetteCursor();
+    updateStatusBar('Tool: Color Picker (Alt)');
+  }
+  
   if (e.key === 'Delete' && state.selectedImage) {
     state.images = state.images.filter(img => img !== state.selectedImage);
     state.selectedImage = null;
@@ -639,6 +654,17 @@ function handleKeyUp(e) {
     state.spacebarDown = false;
     state.isPanning = false;
     elements.canvas.style.cursor = 'default';
+  }
+  
+  // Alt key release - restore previous tool and cursor
+  if (e.key === 'Alt') {
+    e.preventDefault();
+    state.altKeyDown = false;
+    // Restore previous tool
+    state.selectionTool = state.previousTool;
+    // Reset cursor to default
+    resetCursor();
+    updateStatusBar(`Tool: ${state.selectionTool}`);
   }
 }
 
