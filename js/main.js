@@ -191,21 +191,7 @@ function setupEventListeners() {
   elements.toggleRightToolbarCb.addEventListener('change', (e) => {
     elements.app.classList.toggle('right-toolbar-hidden', !e.target.checked);
   });
-// Grid type buttons
-const gridTypeBtns = document.querySelectorAll('.grid-type-btn');
-gridTypeBtns.forEach(btn => {
-  btn.addEventListener('click', () => {
-    const type = btn.dataset.gridType;
-    state.gridType = type;
-    
-    // Update active class on all grid type buttons
-    gridTypeBtns.forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
-    
-    redrawCanvas();
-    updateStatusBar(`Grid: ${type}`);
-  });
-});
+
 
 // Symmetry panel logic
 elements.symmetryBtn.addEventListener('click', (e) => {
@@ -361,9 +347,8 @@ function handleCanvasMouseDown(e) {
     saveStateToUndoStack();
     const gridSize = state.gridSize;
 
-    // Store the last mouse position for interpolation
-    state.lastGridMousePos = { x: pos.x, y: pos.y };
     state.lastGridCell = { x: Math.floor(pos.x / gridSize) * gridSize, y: Math.floor(pos.y / gridSize) * gridSize };
+    state.lastGridMousePos = { x: pos.x, y: pos.y };
 
     if (e.button === 0) { // Left-click to fill grid cell
       const cellX = state.lastGridCell.x;
@@ -492,7 +477,6 @@ function handleCanvasMouseMove(e) {
         // Use interpolation between last mouse position and current position
         // to fill all cells that the mouse passed through
         if (state.lastGridMousePos && (state.lastGridMousePos.x !== pos.x || state.lastGridMousePos.y !== pos.y)) {
-            // Get all cells between last position and current position
             const cells = getCellsBetweenPoints(
                 state.lastGridMousePos.x,
                 state.lastGridMousePos.y,
@@ -598,6 +582,9 @@ function handleCanvasMouseUp(e) {
   if (e.button === 2 && state.isRightClickErasing) {
     state.isRightClickErasing = false;
   }
+  
+  // Reset lastGridMousePos to prevent continuation on next draw
+  state.lastGridMousePos = null;
 
   if (state.isMovingSelection) {
     state.isMovingSelection = false;
@@ -934,7 +921,7 @@ function saveStateToUndoStack() {
       mode: state.symmetry.mode,
       radialRays: state.symmetry.radialRays
     },
-    gridType: state.gridType,
+    gridType: 'square',
     gridTransformationMode: state.gridTransformationMode
   }));
   state.undoStack.push(stateCopy);
@@ -987,13 +974,6 @@ function undo() {
     // Restore grid type if it was saved
     if (previousState.gridType) {
       state.gridType = previousState.gridType;
-      
-      // Update UI to reflect the restored grid type
-      const activeGridBtn = document.querySelector(`.grid-type-btn[data-grid-type="${state.gridType}"]`);
-      if (activeGridBtn) {
-        document.querySelectorAll('.grid-type-btn').forEach(btn => btn.classList.remove('active'));
-        activeGridBtn.classList.add('active');
-      }
     }
     
     // Restore grid transformation mode if it was saved
@@ -1058,13 +1038,6 @@ function redo() {
     // Restore grid type if it was saved
     if (nextState.gridType) {
       state.gridType = nextState.gridType;
-      
-      // Update UI to reflect the restored grid type
-      const activeGridBtn = document.querySelector(`.grid-type-btn[data-grid-type="${state.gridType}"]`);
-      if (activeGridBtn) {
-        document.querySelectorAll('.grid-type-btn').forEach(btn => btn.classList.remove('active'));
-        activeGridBtn.classList.add('active');
-      }
     }
     
     // Restore grid transformation mode if it was saved
@@ -1106,7 +1079,7 @@ function saveState() {
       radialRays: state.symmetry.radialRays
     },
     // Save grid type and other grid settings
-    gridType: state.gridType,
+    gridType: 'square',
     gridTransformationMode: state.gridTransformationMode
   };
   localStorage.setItem('vibeDrawingState', JSON.stringify(stateToSave));
@@ -1144,13 +1117,6 @@ function loadState() {
     // Restore grid type if it was saved
     if (parsedState.gridType) {
       state.gridType = parsedState.gridType;
-      
-      // Update UI to reflect the loaded grid type
-      const activeGridBtn = document.querySelector(`.grid-type-btn[data-grid-type="${state.gridType}"]`);
-      if (activeGridBtn) {
-        document.querySelectorAll('.grid-type-btn').forEach(btn => btn.classList.remove('active'));
-        activeGridBtn.classList.add('active');
-      }
     }
     
     // Restore grid transformation mode if it was saved

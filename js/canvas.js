@@ -1,7 +1,26 @@
 import { state, elements } from './state.js';
 import { updateStatusBar } from './ui.js';
 import { getPathBoundingBox } from './geometry.js';
-import { getImageFromData } from './main.js';
+
+// Cache for image objects to avoid recreating them on every redraw
+const imageCache = new Map();
+
+// Helper function to get or create an Image from base64 data
+function getImageFromData(src) {
+    if (imageCache.has(src)) {
+        return imageCache.get(src);
+    }
+    const img = new Image();
+    img.onload = () => {
+        // Optionally redraw when image loads
+        if (state.ctx && state.images.length > 0) {
+            // The image will be drawn on next redraw
+        }
+    };
+    img.src = src;
+    imageCache.set(src, img);
+    return img;
+}
 
 
 export function setupCanvas() {
@@ -72,20 +91,6 @@ export function redrawCanvas() {
     
     if (state.gridType === 'square') {
       state.ctx.fillRect(cell.x, cell.y, state.gridSize, state.gridSize);
-    } else if (state.gridType === 'rhombus') {
-      // Draw rhombus cell
-      state.ctx.beginPath();
-      const centerX = cell.x + state.gridSize / 2;
-      const centerY = cell.y + state.gridSize / 2;
-      const halfSize = state.gridSize / 2;
-      
-      // Draw rhombus: diamond shape with 4 points
-      state.ctx.moveTo(centerX, centerY - halfSize); // Top
-      state.ctx.lineTo(centerX + halfSize, centerY); // Right
-      state.ctx.lineTo(centerX, centerY + halfSize); // Bottom
-      state.ctx.lineTo(centerX - halfSize, centerY); // Left
-      state.ctx.closePath();
-      state.ctx.fill();
     }
   });
 
@@ -183,57 +188,6 @@ function drawGrid() {
       state.ctx.lineTo(endX, y);
       state.ctx.stroke();
     }
-  } else if (state.gridType === 'rhombus') {
-    // Draw rhombus grid
-    // Calculate grid bounds with some padding
-    const padding = gridSize;
-    const gridStartX = Math.floor((startX - padding) / gridSize) * gridSize;
-    const gridEndX = Math.ceil((endX + padding) / gridSize) * gridSize;
-    const gridStartY = Math.floor((startY - padding) / gridSize) * gridSize;
-    const gridEndY = Math.ceil((endY + padding) / gridSize) * gridSize;
-
-    // Draw diagonal lines for rhombus grid
-    // Diagonal lines from top-left to bottom-right
-    for (let offset = gridStartX - gridEndY; offset <= gridEndX - gridStartY; offset += gridSize) {
-      state.ctx.beginPath();
-      const clipStartX = Math.max(startX, gridStartX);
-      const clipEndX = Math.min(endX, gridEndX);
-      const clipStartY = Math.max(startY, gridStartY);
-      const clipEndY = Math.min(endY, gridEndY);
-      
-      // Line equation: y = x - offset
-      const x1 = Math.max(clipStartX, clipStartY + offset);
-      const y1 = x1 - offset;
-      const x2 = Math.min(clipEndX, clipEndY + offset);
-      const y2 = x2 - offset;
-      
-      if (x1 <= x2 && y1 <= y2) {
-        state.ctx.moveTo(x1, y1);
-        state.ctx.lineTo(x2, y2);
-        state.ctx.stroke();
-      }
-    }
-
-    // Diagonal lines from top-right to bottom-left
-    for (let offset = gridStartX + gridStartY; offset <= gridEndX + gridEndY; offset += gridSize) {
-      state.ctx.beginPath();
-      const clipStartX = Math.max(startX, gridStartX);
-      const clipEndX = Math.min(endX, gridEndX);
-      const clipStartY = Math.max(startY, gridStartY);
-      const clipEndY = Math.min(endY, gridEndY);
-      
-      // Line equation: y = -x + offset
-      const x1 = Math.max(clipStartX, offset - clipEndY);
-      const y1 = -x1 + offset;
-      const x2 = Math.min(clipEndX, offset - clipStartY);
-      const y2 = -x2 + offset;
-      
-      if (x1 <= x2 && y1 >= y2) {
-        state.ctx.moveTo(x1, y1);
-        state.ctx.lineTo(x2, y2);
-        state.ctx.stroke();
-      }
-    }
   }
 }
 
@@ -300,17 +254,6 @@ function drawObjectSelection(obj) {
     } else if (obj.type === 'grid-cell') {
         if (state.gridType === 'square') {
             bbox = { minX: obj.obj.x, minY: obj.obj.y, maxX: obj.obj.x + state.gridSize, maxY: obj.obj.y + state.gridSize };
-        } else if (state.gridType === 'rhombus') {
-            // For rhombus, calculate bounding box that encompasses the diamond shape
-            const centerX = obj.obj.x + state.gridSize / 2;
-            const centerY = obj.obj.y + state.gridSize / 2;
-            const halfSize = state.gridSize / 2;
-            bbox = {
-                minX: centerX - halfSize,
-                minY: centerY - halfSize,
-                maxX: centerX + halfSize,
-                maxY: centerY + halfSize
-            };
         }
     }
 
@@ -363,20 +306,6 @@ function drawGhostPreview() {
             
             if (state.gridType === 'square') {
                 state.ctx.fillRect(cell.x + offset.x, cell.y + offset.y, state.gridSize, state.gridSize);
-            } else if (state.gridType === 'rhombus') {
-                // Draw rhombus cell for ghost preview
-                state.ctx.beginPath();
-                const centerX = cell.x + offset.x + state.gridSize / 2;
-                const centerY = cell.y + offset.y + state.gridSize / 2;
-                const halfSize = state.gridSize / 2;
-                
-                // Draw rhombus: diamond shape with 4 points
-                state.ctx.moveTo(centerX, centerY - halfSize); // Top
-                state.ctx.lineTo(centerX + halfSize, centerY); // Right
-                state.ctx.lineTo(centerX, centerY + halfSize); // Bottom
-                state.ctx.lineTo(centerX - halfSize, centerY); // Left
-                state.ctx.closePath();
-                state.ctx.fill();
             }
         }
     });
