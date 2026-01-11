@@ -505,8 +505,18 @@ function handleCanvasMouseMove(e) {
     const dx = pos.x - state.dragStart.x;
     const dy = pos.y - state.dragStart.y;
 
+    // Apply grid snapping if in grid-draw mode or if grid snapping is enabled
+    let snappedDx = dx;
+    let snappedDy = dy;
+    
+    if (state.selectionTool === 'grid-draw' || state.showGrid) {
+      // Snap to grid by rounding to nearest grid size
+      snappedDx = Math.round(dx / state.gridSize) * state.gridSize;
+      snappedDy = Math.round(dy / state.gridSize) * state.gridSize;
+    }
+
     // Update ghost offset for visual preview instead of moving objects directly
-    state.ghostOffset = { x: dx, y: dy };
+    state.ghostOffset = { x: snappedDx, y: snappedDy };
     redrawCanvas();
     return;
   }
@@ -876,10 +886,23 @@ function getMousePosition(e) {
   };
 }
 
-
 // HISTORY
 function saveStateToUndoStack() {
-  const stateCopy = JSON.parse(JSON.stringify({ images: state.images, drawingPaths: state.drawingPaths, gridCells: state.gridCells }));
+  // When symmetry is active, save the expanded grid cells for consistent undo/redo
+  let gridCellsToSave = state.gridCells;
+  if (state.symmetry.isActive()) {
+    gridCellsToSave = state.symmetry.transformGridCells(state.gridCells, state.gridSize);
+  }
+  
+  const stateCopy = JSON.parse(JSON.stringify({
+    images: state.images,
+    drawingPaths: state.drawingPaths,
+    gridCells: gridCellsToSave,
+    symmetry: {
+      mode: state.symmetry.mode,
+      radialRays: state.symmetry.radialRays
+    }
+  }));
   state.undoStack.push(stateCopy);
   state.redoStack = [];
   if (state.undoStack.length > 50) {
@@ -889,12 +912,41 @@ function saveStateToUndoStack() {
 
 function undo() {
   if (state.undoStack.length > 0) {
-    const currentState = { images: state.images, drawingPaths: state.drawingPaths, gridCells: state.gridCells };
+    const currentState = {
+      images: state.images,
+      drawingPaths: state.drawingPaths,
+      gridCells: state.gridCells,
+      symmetry: {
+        mode: state.symmetry.mode,
+        radialRays: state.symmetry.radialRays
+      }
+    };
     state.redoStack.push(currentState);
     const previousState = state.undoStack.pop();
     state.images = previousState.images;
     state.drawingPaths = previousState.drawingPaths || [];
     state.gridCells = previousState.gridCells || [];
+    
+    // Restore symmetry state if it was saved
+    if (previousState.symmetry) {
+      state.symmetry.mode = previousState.symmetry.mode || 'off';
+      state.symmetry.radialRays = previousState.symmetry.radialRays || 8;
+      
+      // Update UI to reflect the restored symmetry state
+      const activeBtn = document.querySelector(`.symmetry-mode-btn[data-mode="${state.symmetry.mode}"]`);
+      if (activeBtn) {
+        document.querySelectorAll('.symmetry-mode-btn').forEach(btn => btn.classList.remove('active'));
+        activeBtn.classList.add('active');
+      }
+      if (state.symmetry.mode === 'radial') {
+        document.getElementById('radial-ray-count').value = state.symmetry.radialRays;
+        document.getElementById('radial-ray-count-container').classList.remove('hidden');
+      } else {
+        document.getElementById('radial-ray-count-container').classList.add('hidden');
+      }
+      document.getElementById('symmetryBtn').classList.toggle('active', state.symmetry.isActive());
+    }
+    
     redrawCanvas();
     updateStatusBar('Undo');
   }
@@ -902,12 +954,41 @@ function undo() {
 
 function redo() {
   if (state.redoStack.length > 0) {
-    const currentState = { images: state.images, drawingPaths: state.drawingPaths, gridCells: state.gridCells };
+    const currentState = {
+      images: state.images,
+      drawingPaths: state.drawingPaths,
+      gridCells: state.gridCells,
+      symmetry: {
+        mode: state.symmetry.mode,
+        radialRays: state.symmetry.radialRays
+      }
+    };
     state.undoStack.push(currentState);
     const nextState = state.redoStack.pop();
     state.images = nextState.images;
     state.drawingPaths = nextState.drawingPaths || [];
     state.gridCells = nextState.gridCells || [];
+    
+    // Restore symmetry state if it was saved
+    if (nextState.symmetry) {
+      state.symmetry.mode = nextState.symmetry.mode || 'off';
+      state.symmetry.radialRays = nextState.symmetry.radialRays || 8;
+      
+      // Update UI to reflect the restored symmetry state
+      const activeBtn = document.querySelector(`.symmetry-mode-btn[data-mode="${state.symmetry.mode}"]`);
+      if (activeBtn) {
+        document.querySelectorAll('.symmetry-mode-btn').forEach(btn => btn.classList.remove('active'));
+        activeBtn.classList.add('active');
+      }
+      if (state.symmetry.mode === 'radial') {
+        document.getElementById('radial-ray-count').value = state.symmetry.radialRays;
+        document.getElementById('radial-ray-count-container').classList.remove('hidden');
+      } else {
+        document.getElementById('radial-ray-count-container').classList.add('hidden');
+      }
+      document.getElementById('symmetryBtn').classList.toggle('active', state.symmetry.isActive());
+    }
+    
     redrawCanvas();
     updateStatusBar('Redo');
   }
@@ -915,10 +996,21 @@ function redo() {
 
 // --- Persistence ---
 function saveState() {
+  // When symmetry is active, save the expanded grid cells to make them permanent
+  let gridCellsToSave = state.gridCells;
+  if (state.symmetry.isActive()) {
+    gridCellsToSave = state.symmetry.transformGridCells(state.gridCells, state.gridSize);
+  }
+  
   const stateToSave = {
     images: state.images,
     drawingPaths: state.drawingPaths,
-    gridCells: state.gridCells
+    gridCells: gridCellsToSave,
+    // Also save the current symmetry state
+    symmetry: {
+      mode: state.symmetry.mode,
+      radialRays: state.symmetry.radialRays
+    }
   };
   localStorage.setItem('vibeDrawingState', JSON.stringify(stateToSave));
   updateStatusBar('State saved');
@@ -931,10 +1023,32 @@ function loadState() {
     state.images = parsedState.images || [];
     state.drawingPaths = parsedState.drawingPaths || [];
     state.gridCells = parsedState.gridCells || [];
+    
+    // Restore symmetry state if it was saved
+    if (parsedState.symmetry) {
+      state.symmetry.mode = parsedState.symmetry.mode || 'off';
+      state.symmetry.radialRays = parsedState.symmetry.radialRays || 8;
+      
+      // Update UI to reflect the loaded symmetry state
+      const activeBtn = document.querySelector(`.symmetry-mode-btn[data-mode="${state.symmetry.mode}"]`);
+      if (activeBtn) {
+        document.querySelectorAll('.symmetry-mode-btn').forEach(btn => btn.classList.remove('active'));
+        activeBtn.classList.add('active');
+      }
+      if (state.symmetry.mode === 'radial') {
+        document.getElementById('radial-ray-count').value = state.symmetry.radialRays;
+        document.getElementById('radial-ray-count-container').classList.remove('hidden');
+      } else {
+        document.getElementById('radial-ray-count-container').classList.add('hidden');
+      }
+      document.getElementById('symmetryBtn').classList.toggle('active', state.symmetry.isActive());
+    }
+    
     redrawCanvas();
     updateStatusBar('State loaded');
   }
 }
+
 
 function exportAsImage() {
     const tempCanvas = document.createElement('canvas');

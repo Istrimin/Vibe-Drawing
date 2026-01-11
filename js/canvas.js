@@ -59,8 +59,9 @@ export function redrawCanvas() {
     drawPath(state.currentPath);
   }
 
-  // Draw filled grid cells on top of paths
-  state.gridCells.forEach(cell => {
+  // Draw filled grid cells with symmetry support
+  const transformedGridCells = state.symmetry.transformGridCells(state.gridCells, state.gridSize);
+  transformedGridCells.forEach(cell => {
     state.ctx.fillStyle = cell.color;
     state.ctx.fillRect(cell.x, cell.y, state.gridSize, state.gridSize);
   });

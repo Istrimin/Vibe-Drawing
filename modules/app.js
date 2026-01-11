@@ -3,7 +3,6 @@
  */
 
 import * as Canvas from './canvas.js';
-import * as Tools from './tools.js';
 import * as Layers from './layers.js';
 import * as State from './state.js';
 import * as UI from './ui.js';
