@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vibe Drawing</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎨</text></svg>">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="app">
+        <div id="top-toolbar">
+            <div class="tool-setting-horizontal">
+                <label for="brushSizeSlider">Brush</label>
+                <input type="range" id="brushSizeSlider" min="1" max="100" value="3">
+                <span id="brushSizeValue">3</span>
+            </div>
+            <div class="tool-setting-horizontal">
+                <label for="brushColorPicker">Color</label>
+                <input type="color" id="brushColorPicker" value="#ffffff" title="Brush Color">
+                <div id="colorPalette" class="color-palette-container">
+                    <button class="color-swatch active" data-color="#ffffff" style="background-color: #ffffff;" title="White"></button>
+                    <button class="color-swatch" data-color="#ff0000" style="background-color: #ff0000;" title="Red"></button>
+                    <button class="color-swatch" data-color="#ffa500" style="background-color: #ffa500;" title="Orange"></button>
+                    <button class="color-swatch" data-color="#ffff00" style="background-color: #ffff00;" title="Yellow"></button>
+                    <button class="color-swatch" data-color="#008000" style="background-color: #008000;" title="Green"></button>
+                    <button class="color-swatch" data-color="#00ffff" style="background-color: #00ffff;" title="Cyan"></button>
+                    <button class="color-swatch" data-color="#0000ff" style="background-color: #0000ff;" title="Blue"></button>
+                    <button class="color-swatch" data-color="#800080" style="background-color: #800080;" title="Purple"></button>
+                    <button class="color-swatch" data-color="#ffc0cb" style="background-color: #ffc0cb;" title="Pink"></button>
+                    <button class="color-swatch" data-color="#000000" style="background-color: #000000;" title="Black"></button>
+                </div>
+            </div>
+            <div class="tool-setting-horizontal">
+                <label for="eraserSizeSlider">Eraser</label>
+                <input type="range" id="eraserSizeSlider" min="1" max="200" value="20">
+                <span id="eraserSizeValue">20</span>
+            </div>
+        </div>
+        <button id="toggle-panels-btn" title="Toggle Panels">
+            <svg width="20" height="20" viewBox="0 0 24 24"><path fill="currentColor" d="M3 6h18v2H3V6m0 5h18v2H3v-2m0 5h18v2H3v-2z"/></svg>
+        </button>
+        <div id="main-menu" class="hidden">
+            <div class="menu-item"><input type="checkbox" id="toggle-top-toolbar-cb" checked><label for="toggle-top-toolbar-cb">Top Toolbar</label></div>
+            <div class="menu-item"><input type="checkbox" id="toggle-left-toolbar-cb" checked><label for="toggle-left-toolbar-cb">Left Toolbar</label></div>
+            <div class="menu-item"><input type="checkbox" id="toggle-right-toolbar-cb" checked><label for="toggle-right-toolbar-cb">Right Toolbar</label></div>
+            <div class="menu-item"><input type="checkbox" id="toggle-layers-cb" checked><label for="toggle-layers-cb">Layers Panel</label></div>
+        </div>
+        <div id="symmetry-panel" class="hidden">
+            <h4>Symmetry Mode</h4>
+            <div class="symmetry-options">
+                <button class="symmetry-mode-btn" data-mode="off">Off</button>
+                <button class="symmetry-mode-btn" data-mode="vertical">Vertical</button>
+                <button class="symmetry-mode-btn" data-mode="horizontal">Horizontal</button>
+                <button class="symmetry-mode-btn" data-mode="quad">Quad</button>
+                <button class="symmetry-mode-btn" data-mode="radial">Radial</button>
+            </div>
+            <div id="radial-ray-count-container" class="hidden">
+                <label for="radial-ray-count">Rays:</label>
+                <input type="number" id="radial-ray-count" min="2" max="36" value="8">
+            </div>
+        </div>
+        <div id="left-toolbar" class="toolbar-vertical-buttons">
+            <div class="tool-group">
+                <button class="tool-btn active" data-tool="pencil" title="Pencil (P)">
+                    <svg width="20" height="20" viewBox="0 0 24 24"><path fill="currentColor" d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
+                </button>
+                <button class="tool-btn" data-tool="select" title="Select (V)">
+                    <svg width="20" height="20" viewBox="0 0 24 24"><path fill="currentColor" d="M3 3l7.07 16.97 2.51-7.39 7.39-2.51L3 3z"/></svg>
+                </button>
+                <button class="tool-btn" data-tool="eraser" title="Eraser (E)">
+                    <svg width="20" height="20" viewBox="0 0 24 24"><path fill="currentColor" d="M12.5 11.5l-9-9-1.5 1.5 9 9 9-9-1.5-1.5-9 9-9-9 1.5-1.5 9 9 9-9 1.5 1.5-9 9-9-9 1.5 1.5 9-9 9 9-1.5 1.5-9-9-9 9-1.5-1.5 9 9 9-9 1.5-1.5-9 9-9-9-1.5-1.5 9 9z"/></svg>
+                </button>
+                <button class="tool-btn" data-tool="color-picker" title="Color Picker (I)">
+                    <svg width="20" height="20" viewBox="0 0 24 24"><path fill="currentColor" d="M19.34 8.23l-3.57-3.57c-.2-.2-.45-.29-.71-.29s-.51.1-.71.29l-1.41 1.41l4.99 4.99l1.41-1.41c.39-.39.39-1.02 0-1.41M4 18h12v2H4v-2z"/></svg>
+                </button>
+                <button class="tool-btn" data-tool="fill" title="Fill (B)">
+                    <svg width="20" height="20" viewBox="0 0 24 24"><path fill="currentColor" d="M18 4V2H6v2H2v6l4 4v8h8v-8l4-4V4h-4zm-2 6l-4 4-4-4V6h8v4z"/></svg>
+                </button>
+                <button class="tool-btn" data-tool="grid-draw" title="Grid Draw (G)">
+                    <svg width="20" height="20" viewBox="0 0 24 24"><path fill="currentColor" d="M3 3h18v18H3V3z"/></svg>
+                </button>
+                <button class="tool-btn" data-tool="rect-select" title="Rectangular Select (R)">
+                    <svg width="20" height="20" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2" fill="none" stroke="currentColor" stroke-width="2"/></svg>
+                </button>
+                <button class="tool-btn" data-tool="lasso" title="Lasso Select (L)">
+                    <svg width="20" height="20" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" d="M7 3c-2 3-4 6-3 10 1 4 5 5 7 3 2-2 3-5 3-8-2-4-4-5-7-5z"/></svg>
+                </button>
+                <button class="tool-btn" id="symmetryBtn" title="Symmetry (Y)">
+                    <svg width="20" height="20" viewBox="0 0 24 24"><path fill="currentColor" d="M12 2L8 6h3v12h2V6h3l-4-4zM4 18v-2h4v2H4zm12 0v-2h4v2h-4z"/></svg>
+                </button>
+            </div>
+            <div class="tool-group">
+                <button class="tool-btn" id="uploadBtn" title="Upload Image">
+                    <svg width="20" height="20" viewBox="0 0 24 24"><path fill="currentColor" d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+                </button>
+                <input type="file" id="fileInput" accept="image/*" multiple style="display:none">
+            </div>
+        </div>
+        <div id="right-toolbar">
+            <div class="tool-group">
+                <button class="tool-btn" id="toggle-layers-btn" title="Toggle Layers (L)">
+                    <svg width="20" height="20" viewBox="0 0 24 24"><path fill="currentColor" d="M12 16.5l-4-4l1.4-1.4l2.6 2.6l2.6-2.6l1.4 1.4l-4 4zm0-9l-4 4l1.4 1.4l2.6-2.6l2.6 2.6l1.4-1.4l-4-4z"/></svg>
+                </button>
+                <button class="tool-btn" id="zoomInBtn" title="Zoom In (+)">
+                    <svg width="20" height="20" viewBox="0 0 24 24"><path fill="currentColor" d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+                </button>
+                <button class="tool-btn" id="zoomOutBtn" title="Zoom Out (-)">
+                    <svg width="20" height="20" viewBox="0 0 24 24"><path fill="currentColor" d="M19 13H5v-2h14v2z"/></svg>
+                </button>
+                <button class="tool-btn" id="fitBtn" title="Fit to Screen">
+                    <svg width="20" height="20" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" d="M8 3H5a2 2 0 00-2 2v3m18 0V5a2 2 0 00-2-2h-3m0 18h3a2 2 0 002-2v-3M3 16v3a2 2 0 002 2h3"/></svg>
+                </button>
+                <button class="tool-btn" id="gridBtn" title="Toggle Grid (G)" data-active="true">
+                    <svg width="20" height="20" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" d="M3 3v18h18M8 3v18M13 3v18M18 3v18"/></svg>
+                </button>
+                <button class="tool-btn grid-type-btn active" data-grid-type="square" title="Square Grid">
+                    <svg width="20" height="20" viewBox="0 0 24 24"><rect width="18" height="18" x="3" y="3" fill="none" stroke="currentColor" stroke-width="2"/></svg>
+                </button>
+                <button class="tool-btn grid-type-btn" data-grid-type="rhombus" title="Rhombus Grid">
+                    <svg width="20" height="20" viewBox="0 0 24 24"><path d="M12 2l-10 10l10 10l10-10L12 2z" fill="none" stroke="currentColor" stroke-width="2"/></svg>
+                </button>
+                <input type="color" id="gridColorPicker" title="Grid Color" value="#006400">
+                <div class="tool-setting">
+                    <input type="number" id="gridSizeInput" min="10" max="200" step="10" value="50" title="Grid Size">
+                </div>
+                <div class="tool-setting">
+                    <input type="color" id="backgroundColorPicker" value="#2d2d2d" title="Background Color">
+                </div>
+                <button class="tool-btn" id="devToolsBtn" title="Developer Tools">
+                    <svg width="20" height="20" viewBox="0 0 24 24"><path fill="currentColor" d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+                </button>
+            </div>
+            <div class="tool-group">
+                <button class="tool-btn" id="deleteBtn" title="Delete Selected (Del)">
+                    <svg width="20" height="20" viewBox="0 0 24 24"><path fill="currentColor" d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
+                </button>
+                <button class="tool-btn" id="saveBtn" title="Save Project">
+                    <svg width="20" height="20" viewBox="0 0 24 24"><path fill="currentColor" d="M17 3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V7l-4-4zm-5 16c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3zm3-10H5V5h10v4z"/></svg>
+                </button>
+                <button class="tool-btn" id="loadBtn" title="Load Project">
+                    <svg width="20" height="20" viewBox="0 0 24 24"><path fill="currentColor" d="M9 16h6v-6h4l-7-7-7 7h4zm-4 2h14v2H5z"/></svg>
+                </button>
+            </div>
+            <div id="zoomLevel">100%</div>
+        </div>
+        <div class="canvas-container">
+            <canvas id="drawingCanvas"></canvas>
+        </div>
+        <div id="layersPanel">
+            <h3>Layers</h3>
+            <div class="layer-actions">
+                <button id="addLayerBtn">+ Add</button>
+            </div>
+            <ul id="layersList"></ul>
+        </div>
+        <div id="statusBar">
+            <span id="toolStatus">Tool: Select</span>
+            <span id="posStatus">X: 0 Y: 0</span>
+        </div>
+    </div>
+    <script type="module" src="js/main.js" defer></script>
+</body>
+</html>

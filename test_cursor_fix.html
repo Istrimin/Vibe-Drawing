@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Cursor Fix Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            background: #222;
+            color: #eee;
+        }
+        #testCanvas {
+            width: 600px;
+            height: 400px;
+            border: 2px solid #666;
+            margin: 20px 0;
+            background: #111;
+        }
+        .controls {
+            margin: 10px 0;
+            padding: 10px;
+            background: #333;
+            border-radius: 5px;
+        }
+        button {
+            padding: 8px 12px;
+            margin: 5px;
+            background: #444;
+            color: #eee;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+        }
+        button:hover {
+            background: #555;
+        }
+        .log {
+            margin-top: 20px;
+            padding: 10px;
+            background: #111;
+            border: 1px solid #444;
+            max-height: 200px;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 12px;
+        }
+        .success {
+            color: #0f0;
+        }
+        .error {
+            color: #f00;
+        }
+        .info {
+            color: #0af;
+        }
+    </style>
+</head>
+<body>
+    <h1>Cursor Fix Test</h1>
+    <div class="controls">
+        <button onclick="testBasicCursors()">Test Basic Cursors</button>
+        <button onclick="testCustomCursors()">Test Custom Cursors</button>
+        <button onclick="testCursorPanel()">Test Cursor Panel</button>
+        <button onclick="clearLog()">Clear Log</button>
+    </div>
+    <div id="testCanvas"></div>
+    <div id="log" class="log"></div>
+
+    <script>
+        const log = (message, type = 'info') => {
+            const logDiv = document.getElementById('log');
+            const entry = document.createElement('div');
+            entry.className = type;
+            entry.textContent = message;
+            logDiv.appendChild(entry);
+            console[type](message);
+        };
+
+        const clearLog = () => {
+            document.getElementById('log').innerHTML = '';
+        };
+
+        const testCanvas = document.getElementById('testCanvas');
+
+        function testBasicCursors() {
+            log('Testing basic CSS cursors...', 'info');
+
+            const basicCursors = ['auto', 'crosshair', 'pointer', 'move', 'text', 'grab', 'grabbing'];
+
+            basicCursors.forEach(cursor => {
+                testCanvas.style.cursor = cursor;
+                log(`Set cursor to: ${cursor}`, 'success');
+            });
+
+            // Reset to default
+            testCanvas.style.cursor = 'auto';
+            log('Reset to default cursor', 'info');
+        }
+
+        function testCustomCursors() {
+            log('Testing custom image cursors...', 'info');
+
+            const customCursors = [
+                'cursors/pencil.png',
+                'cursors/eraser.png',
+                'cursors/pipette.png',
+                'cursorsNum/1.png',
+                'cursorsNum/2.png',
+                'cursorsNum/3.png'
+            ];
+
+            customCursors.forEach(cursorUrl => {
+                // First check if image exists
+                const img = new Image();
+                img.src = cursorUrl;
+                img.onload = () => {
+                    testCanvas.style.cursor = `url(${cursorUrl}), auto`;
+                    log(`✓ Custom cursor loaded: ${cursorUrl}`, 'success');
+                };
+                img.onerror = () => {
+                    log(`✗ Custom cursor failed: ${cursorUrl}`, 'error');
+                };
+            });
+        }
+
+        function testCursorPanel() {
+            log('Testing cursor panel functionality...', 'info');
+
+            // Simulate the cursor panel creation
+            const cursorPanel = document.createElement('div');
+            cursorPanel.id = 'cursorPanel';
+            cursorPanel.style.position = 'absolute';
+            cursorPanel.style.top = '10px';
+            cursorPanel.style.right = '10px';
+            cursorPanel.style.width = '200px';
+            cursorPanel.style.height = '300px';
+            cursorPanel.style.background = 'rgba(30, 30, 30, 0.8)';
+            cursorPanel.style.border = '1px solid #444';
+            cursorPanel.style.padding = '10px';
+            cursorPanel.style.zIndex = '1000';
+            cursorPanel.style.display = 'block';
+
+            cursorPanel.innerHTML = `
+                <h3>Cursor Panel</h3>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 5px;">
+                    <button onclick="testCanvas.style.cursor = 'crosshair'">Crosshair</button>
+                    <button onclick="testCanvas.style.cursor = 'pointer'">Pointer</button>
+                    <button onclick="testCanvas.style.cursor = 'move'">Move</button>
+                    <button onclick="testCanvas.style.cursor = 'text'">Text</button>
+                </div>
+            `;
+
+            document.body.appendChild(cursorPanel);
+            log('Cursor panel created and displayed', 'success');
+        }
+
+        // Initialize
+        log('Cursor test initialized. Ready to test.', 'info');
+    </script>
+</body>
+</html>
+<task_progress>
+- [x] Analyze cursor implementation in the codebase
+- [x] Check cursor activation logic
+- [x] Identify which cursors are not activating
+- [ ] Debug and fix the activation issue
+- [ ] Test the solution
+</task_progress>
+</write_to_file>

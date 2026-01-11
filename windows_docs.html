@@ -1,0 +1,615 @@
+<!DOCTYPE html><html lang="en"><head>
+  <meta charset="UTF-8">
+  <link rel="icon" type="image/png" href="/assets/icons/black_circle.png?v=1">
+  <link rel="alternate icon" type="image/png" sizes="32x32" href="/assets/icons/black_circle.png?v=1">
+  <link rel="apple-touch-icon" href="/assets/icons/black_circle.png?v=1">
+  <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Get Started | Windows</title>
+
+  <!-- Static SEO for root (non-JS link preview) -->
+  <meta name="description" content="Get started with Pieces on Windows – install, configure, troubleshoot and optimize your setup for seamless AI-powered development.">
+  <meta property="og:title" content="Get Started | Windows">
+  <meta property="og:description" content="Get started with Pieces on Windows – install, configure, troubleshoot and optimize your setup for seamless AI-powered development.">
+  <meta property="og:type" content="article">
+  <meta property="og:url" content="https://docs.pieces.app/products/meet-pieces/windows-installation-guide">
+  <meta property="og:image" content="https://docs.pieces.app/api/og-img?src=https%3A%2F%2Fstorage.googleapis.com%2Fhashnode_product_documentation_assets%2Fog_images%2Fmeet_pieces%2Fmeet_pieces_windows_install.png&amp;w=1200&amp;h=630&amp;fit=cover&amp;q=80&amp;fmt=jpg">
+  <meta property="og:site_name" content="Pieces for Developers">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Get Started | Windows">
+  <meta name="twitter:description" content="Get started with Pieces on Windows – install, configure, troubleshoot and optimize your setup for seamless AI-powered development.">
+  <meta name="twitter:image" content="https://docs.pieces.app/api/og-img?src=https%3A%2F%2Fstorage.googleapis.com%2Fhashnode_product_documentation_assets%2Fog_images%2Fmeet_pieces%2Fmeet_pieces_windows_install.png&amp;w=1200&amp;h=630&amp;fit=cover&amp;q=80&amp;fmt=jpg">
+  <link rel="canonical" href="https://docs.pieces.app/products/meet-pieces/windows-installation-guide">
+  
+  <!-- Styrene Font - You'll need to add your Styrene font files or CDN link here -->
+  <!-- Example: If you have Styrene hosted locally or via a service -->
+  <!-- <link rel="stylesheet" href="/fonts/styrene/styrene.css"> -->
+  
+  <!-- Enhanced Resource Hints for Performance -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
+  <link rel="dns-prefetch" href="https://storage.googleapis.com">
+  <link rel="dns-prefetch" href="https://api.github.com">
+  <link rel="dns-prefetch" href="https://cdn.hashnode.com">
+  
+  <!-- Critical Font Preloading - Inter Variable Font -->
+  <link rel="preload" href="https://fonts.gstatic.com/s/inter/v13/UcCO3FwrK3iLTeHuS_fvQtMwCp50KnMw2boKoduKmMEVuLyfAZ9hiJ-Ek-_EeA.woff2" as="font" type="font/woff2" crossorigin="">
+  
+  <!-- Fallback to Inter Font - Variable with font-display: swap for performance -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&amp;display=swap" rel="stylesheet">
+
+  <!-- Google Tag Manager -->
+  <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+  new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+  j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+  'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+  })(window,document,'script','dataLayer','GTM-K8C6QWB');</script>
+  <!-- End Google Tag Manager -->
+  
+  <!-- PiecesOS Tracking Script -->
+  <!-- 
+    PURPOSE: Track PiecesOS usage and send data to Google Analytics
+    GOALS: 
+    - Detect PiecesOS running on localhost (ports 39300-39399)
+    - Fetch user and application data from PiecesOS API
+    - Store data locally in IndexedDB for performance
+    - Send tracking data to Google Analytics via dataLayer
+    - Provide window.__PiecesOS API for debugging
+  -->
+  <script>
+  (function () {
+    // ---------------- CONFIG ----------------
+    // PiecesOS port scanning range (PiecesOS typically runs on these ports)
+    var BASE_PORT = 39300;
+    var MAX_PORT_SCAN = 39399; // Scan from 39300 to 39399
+    
+    // PiecesOS API endpoints
+    var HEALTH_ENDPOINT = "/.well-known/health";  // Health check endpoint
+    var USER_ENDPOINT = "/user";                  // User data endpoint
+    var APPS_ENDPOINT = "/applications";          // Applications data endpoint
+
+    // Performance settings
+    var FETCH_TIMEOUT = 2500;       // 2.5 second timeout for API calls
+
+    // ---------------- helpers: fetch with timeout ----------------
+    function fetchWithTimeout(url, ms) {
+      // Fetch with timeout to prevent hanging requests
+      return new Promise(function (resolve, reject) {
+        var controller = new AbortController();
+        var id = setTimeout(function () { controller.abort(); }, ms);
+        fetch(url, { signal: controller.signal })
+          .then(resolve)
+          .catch(reject)
+          .finally(function () { clearTimeout(id); });
+      });
+    }
+
+    // ---------------- helpers: port scanning ----------------
+    // Scan localhost ports 39300-39399 to find PiecesOS instance
+    function scanForPiecesOS() {
+      return new Promise(function (resolve, reject) {
+        var currentPort = BASE_PORT;
+        var maxConcurrent = 5; // Limit concurrent requests
+        var activeRequests = 0;
+        var foundPort = null;
+        var completed = false;
+
+        // Define allowed PiecesOS ports (inclusive range)
+        var ALLOWED_PIECESOS_PORTS = [];
+        for (var p = BASE_PORT; p <= MAX_PORT_SCAN; p++) {
+          ALLOWED_PIECESOS_PORTS.push(p);
+        }
+
+        function tryPort(port) {
+          if (completed) return;
+          // Validate port is in allowed list
+          if (ALLOWED_PIECESOS_PORTS.indexOf(port) === -1) {
+            // Skip ports not in the allowed range
+            return;
+          }
+          activeRequests++;
+          var url = "http://localhost:" + port + HEALTH_ENDPOINT;
+          
+          fetchWithTimeout(url, 1000).then(function (response) {
+            if (completed) return;
+            
+            
+            if (response && response.ok) {
+              response.text().then(function (text) {
+                if (completed) return;
+                
+                
+                // Check if response looks like PiecesOS health response (contains UUID pattern)
+                // Expected format: "ok:d64a2162-3e8a-4220-888a-ee39bc53da8c"
+                if (text && text.match(/^ok:[a-f0-9-]{36}$/i)) {
+                  completed = true;
+                  foundPort = port;
+                  resolve(port);
+                } else {
+                  // Not PiecesOS, continue scanning
+                  activeRequests--;
+                  if (activeRequests === 0 && currentPort > MAX_PORT_SCAN) {
+                    if (!foundPort) {
+                      reject(new Error("PiecesOS not found on any port"));
+                    }
+                  }
+                }
+              }).catch(function (err) {
+                // Not PiecesOS, continue scanning
+                activeRequests--;
+                if (activeRequests === 0 && currentPort > MAX_PORT_SCAN) {
+                  if (!foundPort) {
+                    reject(new Error("PiecesOS not found on any port"));
+                  }
+                }
+              });
+            } else {
+              // Not PiecesOS, continue scanning
+              activeRequests--;
+              if (activeRequests === 0 && currentPort > MAX_PORT_SCAN) {
+                if (!foundPort) {
+                  reject(new Error("PiecesOS not found on any port"));
+                }
+              }
+            }
+          }).catch(function (err) {
+            // Not PiecesOS, continue scanning
+            activeRequests--;
+            if (activeRequests === 0 && currentPort > MAX_PORT_SCAN) {
+              if (!foundPort) {
+                reject(new Error("PiecesOS not found on any port"));
+              }
+            }
+          });
+        }
+
+        function startNextBatch() {
+          if (completed || currentPort > MAX_PORT_SCAN) {
+            if (activeRequests === 0 && !foundPort) {
+              reject(new Error("PiecesOS not found on any port"));
+            }
+            return;
+          }
+
+          var batchSize = Math.min(maxConcurrent - activeRequests, MAX_PORT_SCAN - currentPort + 1);
+          for (var i = 0; i < batchSize; i++) {
+            if (currentPort <= MAX_PORT_SCAN) {
+              tryPort(currentPort);
+              currentPort++;
+            }
+          }
+
+          // Start next batch when current batch completes
+          setTimeout(startNextBatch, 100);
+        }
+
+        startNextBatch();
+      });
+    }
+
+    // ---------------- helpers: parse and merge ----------------
+    // Transform PiecesOS API responses into consistent format
+    
+    function normalizeUserPayload(rawUser) {
+      // Extract and normalize user data from PiecesOS API response
+      if (!rawUser || !rawUser.user) return null;
+      var u = rawUser.user;
+      return {
+        id: u.id || null,
+        descopeId: (u.descope && u.descope.descope_id) || null,
+        email: u.email || null,
+        name: u.name || null,
+        picture: u.picture || null,
+        created: (u.created && u.created.value) || null,
+        updated: (u.updated && u.updated.value) || null,
+        allocation: u.allocation || null,
+        providers: u.providers || null,
+        version: (u.allocation && u.allocation.version) || null,
+        region: (u.allocation && u.allocation.region) || null,
+        cloudUrls: (u.allocation && u.allocation.urls) || null
+      };
+    }
+
+    function normalizeAppsPayload(rawApps) {
+      // Extract and normalize applications data from PiecesOS API response
+      if (!rawApps || !rawApps.iterable) return [];
+      return rawApps.iterable.map(function (a) {
+        return {
+          id: a.id,
+          name: a.name,
+          version: a.version,
+          platform: a.platform,
+          privacy: a.privacy,
+          capabilities: a.capabilities
+        };
+      });
+    }
+
+    function createDataObject(userData, appsData, port) {
+      // Create data object from fresh PiecesOS API responses
+      return {
+        user: userData,
+        applications: appsData,
+        piecesOSPort: port,
+        lastFetchedAt: Date.now()
+      };
+    }
+
+    // ---------------- helpers: IndexedDB storage ----------------
+    // Store PiecesOS data locally for performance and offline access
+    
+    function openIndexedDB() {
+      return new Promise(function (resolve, reject) {
+        var request = indexedDB.open("PiecesOSData", 1);
+        request.onerror = function () { reject(request.error); };
+        request.onsuccess = function () { resolve(request.result); };
+        request.onupgradeneeded = function (event) {
+          var db = event.target.result;
+          if (!db.objectStoreNames.contains("piecesData")) {
+            db.createObjectStore("piecesData", { keyPath: "id" });
+          }
+        };
+      });
+    }
+    
+    function storeInIndexedDB(data) {
+      return openIndexedDB().then(function (db) {
+        return new Promise(function (resolve, reject) {
+          var transaction = db.transaction(["piecesData"], "readwrite");
+          var store = transaction.objectStore("piecesData");
+          var request = store.put({
+            id: "current",
+            data: data,
+            timestamp: Date.now()
+          });
+          request.onsuccess = function () { resolve(request.result); };
+          request.onerror = function () { reject(request.error); };
+        });
+      });
+    }
+    
+    function getFromIndexedDB() {
+      return openIndexedDB().then(function (db) {
+        return new Promise(function (resolve, reject) {
+          var transaction = db.transaction(["piecesData"], "readonly");
+          var store = transaction.objectStore("piecesData");
+          var request = store.get("current");
+          request.onsuccess = function () { resolve(request.result); };
+          request.onerror = function () { reject(request.error); };
+        });
+      });
+    }
+
+    // ---------------- helpers: GA4 / dataLayer ----------------
+    // Send PiecesOS data to Google Analytics for tracking and analysis
+    
+    function getClientIdFrom_ga_cookie() {
+      // Extract Google Analytics client ID from _ga cookie
+      try {
+        var cookie = document.cookie.split("; ").find(function (c) { return c.indexOf("_ga=") === 0; });
+        if (!cookie) return null;
+        var val = cookie.split("=")[1];
+        var parts = val.split(".");
+        if (parts.length >= 2) return parts.slice(-2).join(".");
+        return val;
+      } catch (e) {
+        return null;
+      }
+    }
+
+    function pushToDataLayer(merged) {
+      // Send PiecesOS data to Google Tag Manager dataLayer
+      var appsIds = (merged.applications || []).map(function (a) { return a.id; }).filter(Boolean);
+      var payload = {
+        event: "piecesos_data_updated",
+        pieces_user_id: merged.user ? merged.user.id : null,
+        pieces_descope_id: merged.user ? merged.user.descopeId : null,
+        pieces_apps_csv: appsIds.length ? appsIds.join(",") : null,
+        pieces_apps_json: JSON.stringify(merged.applications || []),
+        pieces_version: merged.user ? merged.user.version : null,
+        pieces_region: merged.user ? merged.user.region : null,
+        pieces_cloud_url: merged.user && merged.user.cloudUrls ?
+          (merged.user.cloudUrls.id && merged.user.cloudUrls.id.url) ||
+          (merged.user.cloudUrls.base && merged.user.cloudUrls.base.url) : null,
+        pieces_ga4_client_id: getClientIdFrom_ga_cookie()
+      };
+      window.dataLayer = window.dataLayer || [];
+      window.dataLayer.push(payload);
+    }
+
+    function setGtagUserProperties(merged) {
+      // Set user properties in Google Analytics for better segmentation
+      if (typeof window.gtag === "function" && merged && merged.user && merged.user.id) {
+        try {
+          window.gtag("set", "user_properties", { pieces_user_id: merged.user.id });
+        } catch (e) {
+          console.warn("PiecesOS: gtag set failed", e);
+        }
+      }
+    }
+
+    // ---------------- main worker ----------------
+    // Main execution flow: scan for PiecesOS, fetch data, send to analytics
+    
+    // Check if we have recent data in IndexedDB first
+    var DATA_CACHE_DURATION = 5 * 60 * 1000; // 5 minutes in milliseconds
+    
+    function shouldFetchFreshData(storedData) {
+      if (!storedData || !storedData.timestamp) return true;
+      var age = Date.now() - storedData.timestamp;
+      return age > DATA_CACHE_DURATION;
+    }
+    
+    function processPiecesOSData(data, port) {
+      // Store data in IndexedDB for performance
+      storeInIndexedDB(data).then(function () {
+        console.log("PiecesOS: Data stored in IndexedDB");
+      }).catch(function (err) {
+        console.warn("PiecesOS: Failed to store in IndexedDB:", err);
+      });
+      
+      // Send data to analytics
+      pushToDataLayer(data);
+      setGtagUserProperties(data);
+      try {
+        // Expose API for debugging: window.__PiecesOS.read() and window.__PiecesOS.port
+        window.__PiecesOS = window.__PiecesOS || {};
+        window.__PiecesOS.read = function () { return Promise.resolve(data); };
+        window.__PiecesOS.port = port; // Expose the port
+        window.__PiecesOS.getStoredData = function () { return getFromIndexedDB(); };
+      } catch (e) {}
+    }
+    
+    // First, check if we have recent data in IndexedDB
+    getFromIndexedDB().then(function (storedData) {
+      if (!shouldFetchFreshData(storedData)) {
+        console.log("PiecesOS: Using cached data from IndexedDB");
+        processPiecesOSData(storedData.data, storedData.data.piecesOSPort);
+        return;
+      }
+      
+      console.log("PiecesOS: Fetching fresh data from PiecesOS API");
+      // Scan for PiecesOS port and fetch fresh data
+      scanForPiecesOS().then(function (port) {
+        
+        var USER_URL = "http://localhost:" + port + USER_ENDPOINT;
+        var APPS_URL = "http://localhost:" + port + APPS_ENDPOINT;
+
+        // Fetch user and applications data from PiecesOS API
+        Promise.all([
+          fetchWithTimeout(USER_URL, FETCH_TIMEOUT).catch(function () { return null; }),
+          fetchWithTimeout(APPS_URL, FETCH_TIMEOUT).catch(function () { return null; })
+        ]).then(function (responses) {
+          var uResp = responses[0], aResp = responses[1];
+          var uJsonPromise = uResp && uResp.ok ? uResp.json().catch(function () { return null; }) : Promise.resolve(null);
+          var aJsonPromise = aResp && aResp.ok ? aResp.json().catch(function () { return null; }) : Promise.resolve(null);
+
+          Promise.all([uJsonPromise, aJsonPromise]).then(function (jsons) {
+            var uJson = jsons[0], aJson = jsons[1];
+            var userData = normalizeUserPayload(uJson);
+            var appsData = normalizeAppsPayload(aJson);
+            var data = createDataObject(userData, appsData, port);
+            
+            processPiecesOSData(data, port);
+          });
+        });
+      }).catch(function (err) {
+        // If PiecesOS scan fails, try to use cached data as fallback
+        if (storedData && storedData.data) {
+          console.log("PiecesOS: PiecesOS not available, using cached data");
+          processPiecesOSData(storedData.data, storedData.data.piecesOSPort);
+        }
+      });
+    }).catch(function (err) {
+      console.log("PiecesOS: No cached data, scanning for PiecesOS");
+      // No cached data, scan for PiecesOS
+      scanForPiecesOS().then(function (port) {
+        
+        var USER_URL = "http://localhost:" + port + USER_ENDPOINT;
+        var APPS_URL = "http://localhost:" + port + APPS_ENDPOINT;
+
+        // Fetch user and applications data from PiecesOS API
+        Promise.all([
+          fetchWithTimeout(USER_URL, FETCH_TIMEOUT).catch(function () { return null; }),
+          fetchWithTimeout(APPS_URL, FETCH_TIMEOUT).catch(function () { return null; })
+        ]).then(function (responses) {
+          var uResp = responses[0], aResp = responses[1];
+          var uJsonPromise = uResp && uResp.ok ? uResp.json().catch(function () { return null; }) : Promise.resolve(null);
+          var aJsonPromise = aResp && aResp.ok ? aResp.json().catch(function () { return null; }) : Promise.resolve(null);
+
+          Promise.all([uJsonPromise, aJsonPromise]).then(function (jsons) {
+            var uJson = jsons[0], aJson = jsons[1];
+            var userData = normalizeUserPayload(uJson);
+            var appsData = normalizeAppsPayload(aJson);
+            var data = createDataObject(userData, appsData, port);
+            
+            processPiecesOSData(data, port);
+          });
+        });
+      }).catch(function (err) {
+        // Silent error handling - don't break the page if PiecesOS tracking fails
+      });
+    });
+  })();
+  </script>
+  <!-- End PiecesOS Tracking Script -->
+  
+  <!--app-head-->
+  <script type="module" crossorigin="" src="/assets/index-CCV-NH1v.js"></script>
+  <link rel="modulepreload" crossorigin="" href="/assets/vendor-react-Do1tFklo.js">
+  <link rel="modulepreload" crossorigin="" href="/assets/vendor-ui-DbAqtpSL.js">
+  <link rel="modulepreload" crossorigin="" href="/assets/vendor-charts-BUww40FN.js">
+  <link rel="modulepreload" crossorigin="" href="/assets/vendor-markdown-M3-7-zpV.js">
+  <link rel="modulepreload" crossorigin="" href="/assets/vendor-query-BL_T-d2j.js">
+  <link rel="stylesheet" crossorigin="" href="/assets/index-D_tLOTs-.css">
+<meta property="og:image:width" content="1200"><meta property="og:image:height" content="630"></head>
+<body>
+  <!-- Google Tag Manager (noscript) -->
+  <noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-K8C6QWB" height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
+  <!-- End Google Tag Manager (noscript) -->
+  
+  <div id="root">
+<main role="main">
+  <article class="markdown-content prose prose-sm sm:prose md:prose-lg lg:prose-lg">
+    <img src="https://storage.googleapis.com/hashnode_product_documentation_assets/meet_pieces_assets/trimmed_windows_banner.png" alt="" align="center" fullwidth="true">
+
+<hr>
+<h2>Recommended Installation Method</h2>
+<p>The recommended installation method on Windows is using the <code>.appinstaller</code> file for the Pieces Desktop App.</p>
+<p>Download the Pieces Desktop app—after installing Pieces Desktop, PiecesOS will be automatically installed, as it is a necessary dependency.</p>
+<cardgroup cols="{1}">
+  <card title="Download — Pieces Desktop App" image="/assets/icons/platform_logos/windows_logo.png" href="https://builds.pieces.app/stages/production/appinstaller/pieces_for_x.appinstaller" gaevent="windows_pfd_download_appinstaller" gaplatform="windows">
+    *Recommended Method*
+
+<pre><code>Windows 10 (1809) or higher required.
+</code></pre>
+  </card>
+</cardgroup>
+
+<callout type="alert">
+  
+<p>  PiecesOS is a <strong>required</strong> Core Dependency. When using the recommended <strong>.appinstaller</strong> method, PiecesOS will be installed automatically alongside the Pieces Desktop app—there is no need to download it separately. If you are using an alternative/manual installation method, you may need to download and install PiecesOS manually.</p>
+</callout>
+
+<h2>Install the AppInstaller Files</h2>
+<p>Now that you have downloaded the <code>.appinstaller</code> files, it’s time to install Pieces.</p>
+<steps>
+  <step title="Find Saved Location">
+    Open your **Downloads** folder (or wherever you saved the installer) and look for the `.appinstaller` file you just downloaded (e.g., *pieces-appinstaller*).
+  </step>
+
+  <step title="Open the Installer">
+    Double-click the `.appinstaller` file to launch the installation wizard.
+  </step>
+</steps>
+
+<p>Installing via <code>.appinstaller</code> or any of the alternative methods, like <code>.exe</code>, may cause some user prompt windows to open up—read more about them below.</p>
+<h3>System Requirements</h3>
+<p>Your Windows device must be running&nbsp;<strong>Windows 10 (1809) or higher.</strong></p>
+<p>Click here for a quick guide on <a href="/products/meet-pieces/troubleshooting/windows#checking-windows-version">determining your OS version</a>.</p>
+<hr>
+<table>
+<thead>
+<tr>
+<th><strong>Component</strong></th>
+<th><strong>Minimum</strong></th>
+<th><strong>Recommended</strong></th>
+<th><strong>Notes</strong></th>
+</tr>
+</thead>
+<tbody><tr>
+<td><em>CPU</em></td>
+<td>Any modern CPU</td>
+<td>Multi-core CPU</td>
+<td>Avoid dual-core processors—aim for at least a 4-core CPU.</td>
+</tr>
+<tr>
+<td><em>RAM (Local Mode)</em></td>
+<td>8 GB total system RAM with 2 GB free</td>
+<td>16 GB total system RAM or more</td>
+<td>Applies when PiecesOS is running locally.</td>
+</tr>
+<tr>
+<td><em>RAM (Cloud Mode)</em></td>
+<td>8 GB total system RAM with 1 GB free</td>
+<td>16 GB total system RAM or more</td>
+<td>Applies when PiecesOS is running in cloud mode.</td>
+</tr>
+<tr>
+<td><em>Disk Space</em></td>
+<td>2 GB minimum (1 GB for PiecesOS + 0.5–1 GB for data), with at least 4 GB free</td>
+<td>8 GB with at least 6 GB free or more</td>
+<td>Ensure additional free space for data storage and future growth.</td>
+</tr>
+</tbody></table>
+<hr>
+<h2>Alternative Installations</h2>
+<p>If you prefer an alternative installation method aside from the <code>.appinstaller</code> method, you can also use the <code>exe</code> installers or <code>WinGet</code> commands through your terminal.</p>
+<h3>via EXE</h3>
+<p>If you cannot use the&nbsp;<code>.appinstaller</code> method for any reason, you can also install Pieces via <code>.exe</code>.</p>
+<cardgroup cols="{1}">
+  <card title="Download — Pieces Desktop App (EXE)" image="/assets/icons/platform_logos/windows_logo.png" href="https://builds.pieces.app/stages/production/pieces_for_x/windows-exe/download?download=true&amp;product=DOCUMENTATION_WEBSITE&amp;_gl=1*1a9yqbf*_gcl_au*OTQ5NDE1NTA4LjE3Mzk0NjU4MzM.*_ga*MTI0OTgzMTMuMTcyNDA5ODQwNg..*_ga_BVYEFRWCYX*MTc0MDc4MjM4Mi44LjAuMTc0MDc4MjM4Mi42MC4wLjA." gaevent="windows_pfd_download_exe" gaplatform="windows">
+    *Alternative Method*
+
+<pre><code>Windows 10 (20H0) or higher required.
+</code></pre>
+  </card>
+</cardgroup>
+
+<steps>
+  <step title="Find Saved Location">
+    Open your **Downloads** folder (or wherever you saved the file) and look for the `.exe` file you just downloaded (e.g., *pieces-exe*).
+  </step>
+
+  <step title="Open the Installer">
+    Double-click the `.exe` file to launch the Windows installation prompt.
+  </step>
+</steps>
+
+<h3>via WinGet</h3>
+<p>WinGet will allow you to easily install Pieces without having to leave the terminal.</p>
+<cardgroup cols="{1}">
+  <card title="WinGet — Pieces" image="https://storage.googleapis.com/hashnode_product_documentation_assets/cdn_migrate_repair_2/winget.webp">
+    1. Use Windows Terminal, Command Prompt, or PowerShell.
+
+<pre><code>2. Then, copy and run the command below:
+
+```bash
+winget install "Pieces"
+```
+
+You will be promoted to agree or disagree to the terms of use a second time, so enter `Y` to proceed with the installation.
+</code></pre>
+  </card>
+</cardgroup>
+
+<h2>On-Screen Prompts</h2>
+<p>There are a series of on-screen prompts to navigate through when installing the Pieces Desktop App and PiecesOS, through either the <code>.exe</code> or <code>.appinstaller</code> desktop installation methods.</p>
+<ol>
+<li><p><strong>User Account Control (UAC):</strong> If prompted by Windows’ User Account Control, click <code>Yes</code> to allow the installer to make changes.</p>
+</li>
+<li><p><strong>Install Location:</strong> Choose where to install Pieces (default location is recommended) and click <code>Install</code>.</p>
+</li>
+<li><p><strong>Select Additional Tasks:</strong> Check <code>Create a desktop shortcut</code> or <code>Automatically start Pieces</code> if preferred.</p>
+</li>
+<li><p><strong>Ready to Install:</strong> Click <code>Install</code><strong>.</strong></p>
+</li>
+<li><p><strong>Installation Progress &amp; Completion:</strong> Wait for the installation to complete. Once finished, you’ll see a confirmation message. Click <code>Finish</code> to close the installer.</p>
+</li>
+</ol>
+<h2>Enterprise &amp; Advanced Security Considerations</h2>
+<p>Some Windows systems—particularly those in enterprise environments or with advanced security settings—may require using an <code>.exe</code> package (default installer) instead of an <code>.appinstaller</code> package (AppInstaller) for compatibility reasons.</p>
+<p>If you find that your environment is restrictive or that the <code>.appinstaller</code> package doesn’t work properly, consider using the <code>.exe</code> version or an alternative method.</p>
+<h2>Post-Installation Tips</h2>
+<p>Read the documentation below for some tips and information to make sure you’re up and running with the latest version(s) of PiecesOS and the Pieces Desktop App, as well as steps to uninstall Pieces software from your Windows device.</p>
+<h3>Updating</h3>
+<p>The Pieces Desktop App <strong>automatically downloads and installs new updates.</strong></p>
+<p>You can also manually check for updates to PiecesOS and the Pieces Desktop App by clicking the <code>Profile</code> nested in the <strong>Search Bar</strong> at the top of your Pieces Desktop App view, then selecting <code>Check for Desktop App Updates</code> or <code>Check for PiecesOS Updates</code>.</p>
+<img src="https://storage.googleapis.com/hashnode_product_documentation_assets/meet_pieces_assets/meet_pieces/get_started/windows/windows_check_pfd_for_updates.gif" alt="" align="center" fullwidth="true">
+
+<h3>Uninstalling</h3>
+<p>Open <strong>Settings,</strong> then find <strong>Apps</strong> and search <code>Pieces.</code></p>
+<p>Two applications will appear after you enter the search query—<strong>Pieces Desktop</strong> and <strong>PiecesOS.</strong> Click the three dots to the right of the application title, and click <code>Uninstall</code>.</p>
+<img src="https://storage.googleapis.com/hashnode_product_documentation_assets/meet_pieces_assets/meet_pieces/get_started/windows/uninstalling_on_windows.gif" alt="" align="center" fullwidth="true">
+
+<h2>Additional Resources</h2>
+<p>Click here for additional <a href="/products/meet-pieces/troubleshooting">documentation on troubleshooting</a> or reach out to <a href="/products/support">support.</a></p>
+
+  </article>
+</main></div>
+  
+
+
+
+
+
+<noscript id="seo-fallback">
+<main role="main" aria-label="Homepage server snapshot">
+<div class="min-h-screen bg-muted/20 text-foreground relative"><div class="fixed inset-0 z-0"><img src="/assets/icons/backgrounds/tacPbCFHcXRdioUoSpbbhgk8.png" alt="" class="w-full h-full object-cover"></div><div class="relative z-10"><header class="border-b border-border bg-background/80 backdrop-blur-sm sticky top-0 z-50"><div class="container-responsive"><div class="flex justify-between items-center h-16"><div class="flex items-center gap-2"><img src="/assets/icons/pieces_filled.svg" alt="Pieces" class="w-8 h-8"><span class="text-xl font-bold">Pieces</span></div><nav class="flex items-center gap-4"><div class="hidden md:flex items-center gap-4"><a class="text-sm text-muted-foreground hover:text-foreground transition-colors" href="/products/meet-pieces">Documentation</a><button class="inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&amp;_svg]:pointer-events-none [&amp;_svg]:size-4 [&amp;_svg]:shrink-0 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-9 rounded-md px-3"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-github w-4 h-4 mr-2"><path d="M15 22v-4a4.8 4.8 0 0 0-1-3.5c3 0 6-2 6-5.5.08-1.25-.27-2.48-1-3.5.28-1.15.28-2.35 0-3.5 0 0-1 0-3 1.5-2.64-.5-5.36-.5-8 0C6 2 5 2 5 2c-.3 1.15-.3 2.35 0 3.5A5.403 5.403 0 0 0 4 9c0 3.5 3 5.5 6 5.5-.39.49-.68 1.05-.85 1.65-.17.6-.22 1.23-.15 1.85v4"></path><path d="M9 18c-4.51 2-5-2-7-2"></path></svg>GitHub</button></div><button class="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&amp;_svg]:pointer-events-none [&amp;_svg]:size-4 [&amp;_svg]:shrink-0 border hover:text-accent-foreground h-9 w-9 bg-muted/60 hover:bg-muted border-border/60 relative overflow-hidden flex-shrink-0"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-sun h-4 w-4 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2"></path><path d="M12 20v2"></path><path d="m4.93 4.93 1.41 1.41"></path><path d="m17.66 17.66 1.41 1.41"></path><path d="M2 12h2"></path><path d="M20 12h2"></path><path d="m6.34 17.66-1.41 1.41"></path><path d="m19.07 4.93-1.41 1.41"></path></svg><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-moon h-4 w-4 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"></path></svg><span class="sr-only">Toggle theme</span></button></nav></div></div></header><section class="section-spacing"><div class="container-responsive text-center"><div class="inline-flex items-center gap-2 px-3 py-1 mb-4 text-xs font-medium rounded-full border bg-card"><span>🔒 On-Device, Secure Context Storage</span></div><h1 class="text-3xl md:text-4xl lg:text-5xl font-bold mb-4">Get Up and Running with Pieces</h1><p class="text-base text-muted-foreground mb-8 max-w-3xl mx-auto">Pieces captures and resurfaces your workflow context so you never lose track of what you were doing. This documentation helps you install, integrate, and master the tools that make that possible.</p><a href="/products/meet-pieces"><button class="inline-flex items-center justify-center whitespace-nowrap text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&amp;_svg]:pointer-events-none [&amp;_svg]:size-4 [&amp;_svg]:shrink-0 bg-primary text-primary-foreground hover:bg-primary/90 h-11 rounded-md px-8 gap-2"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-book-open w-4 h-4"><path d="M12 7v14"></path><path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"></path></svg>Read the Docs<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-arrow-up-right w-4 h-4"><path d="M7 7h10v10"></path><path d="M7 17 17 7"></path></svg></button></a></div></section><section class="section-spacing"><div class="container-responsive"><h2 class="text-2xl font-bold mb-6">Meet Pieces</h2><div class="responsive-grid grid-auto-fit"><a class="card-base card-hover cursor-pointer block" href="/products/desktop"><div class="card-content flex items-start gap-4"><img src="/assets/icons/pieces_filled.svg" alt="Pieces Desktop" class="card-icon"><div class="flex-1 min-w-0"><h3 class="card-title">Pieces Desktop App<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-arrow-up-right card-arrow"><path d="M7 7h10v10"></path><path d="M7 17 17 7"></path></svg></h3><p class="card-description">The flagship desktop application with AI-powered code management, search, and generation features</p></div></div></a><a class="card-base card-hover cursor-pointer block" href="/products/core-dependencies"><div class="card-content flex items-start gap-4"><img src="/assets/icons/pieces_os_light_logo.png" alt="Core Dependencies" class="card-icon"><div class="flex-1 min-w-0"><h3 class="card-title">Core Dependencies<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-arrow-up-right card-arrow"><path d="M7 7h10v10"></path><path d="M7 17 17 7"></path></svg></h3><p class="card-description">Essential components including PiecesOS and Ollama for local LLM support</p></div></div></a></div></div></section><section class="section-spacing"><div class="container-responsive"><h2 class="text-2xl font-bold mb-6">Model Context Protocol (MCP)</h2><div class="space-y-6"><div class="card-base"><div class="card-content text-center"><h3 class="text-xl font-semibold mb-2">Introducing Pieces Model Context Protocol</h3><p class="text-sm text-muted-foreground mb-6">Connect your favorite AI tools directly to Pieces for context-rich interactions</p><a href="/products/mcp/get-started" target="_blank" rel="noopener noreferrer"><button class="inline-flex items-center justify-center whitespace-nowrap text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&amp;_svg]:pointer-events-none [&amp;_svg]:size-4 [&amp;_svg]:shrink-0 bg-primary text-primary-foreground hover:bg-primary/90 h-9 rounded-md px-3 gap-2">Get Started<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-arrow-up-right w-4 h-4"><path d="M7 7h10v10"></path><path d="M7 17 17 7"></path></svg></button></a></div></div><div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-4"><div class="card-base card-hover cursor-pointer"><div class="card-content flex items-start gap-4"><img src="/assets/icons/cursor.png" alt="Cursor" class="card-icon"><div class="flex-1 min-w-0"><h3 class="card-title">MCP → Cursor<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-arrow-up-right card-arrow"><path d="M7 7h10v10"></path><path d="M7 17 17 7"></path></svg></h3><p class="card-description">Connect MCP with Cursor IDE for context-rich AI assistance</p></div></div></div><div class="card-base card-hover cursor-pointer"><div class="card-content flex items-start gap-4"><img src="/assets/icons/perfect_copilot_logo.jpg" alt="GitHub Copilot" class="card-icon"><div class="flex-1 min-w-0"><h3 class="card-title">MCP → GitHub Copilot<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-arrow-up-right card-arrow"><path d="M7 7h10v10"></path><path d="M7 17 17 7"></path></svg></h3><p class="card-description">Integrate MCP with GitHub Copilot for enhanced code suggestions</p></div></div></div><div class="card-base card-hover cursor-pointer"><div class="card-content flex items-start gap-4"><img src="/assets/icons/goose_ai_light.png" alt="Goose" class="card-icon"><div class="flex-1 min-w-0"><h3 class="card-title">MCP → Goose<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-arrow-up-right card-arrow"><path d="M7 7h10v10"></path><path d="M7 17 17 7"></path></svg></h3><p class="card-description">Use MCP with Goose for intelligent development workflows</p></div></div></div><div class="card-base card-hover cursor-pointer"><div class="card-content flex items-start gap-4"><img src="/assets/icons/claude.png" alt="Claude Desktop" class="card-icon"><div class="flex-1 min-w-0"><h3 class="card-title">MCP → Claude Desktop<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-arrow-up-right card-arrow"><path d="M7 7h10v10"></path><path d="M7 17 17 7"></path></svg></h3><p class="card-description">Use MCP with Claude Desktop for powerful context-aware conversations</p></div></div></div></div></div></div></section><section class="section-spacing"><div class="container-responsive"><div class=""><h2 class="text-2xl font-bold mb-6">IDEs &amp; Editors</h2><div class="responsive-grid grid-three-columns"><div class="card-base card-hover cursor-pointer"><div class="card-content flex items-start gap-4"><img src="/assets/icons/vs_code.png" alt="VS Code" class="card-icon"><div class="flex-1 min-w-0"><h3 class="card-title">VS Code<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-arrow-up-right card-arrow"><path d="M7 7h10v10"></path><path d="M7 17 17 7"></path></svg></h3><p class="card-description">The flagship extension for Visual Studio Code</p></div></div></div><div class="card-base card-hover cursor-pointer"><div class="card-content flex items-start gap-4"><img src="/assets/icons/jetbrains.png" alt="JetBrains" class="card-icon"><div class="flex-1 min-w-0"><h3 class="card-title">JetBrains<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-arrow-up-right card-arrow"><path d="M7 7h10v10"></path><path d="M7 17 17 7"></path></svg></h3><p class="card-description">Plugin for IntelliJ IDEA, PyCharm, WebStorm, and more</p></div></div></div><div class="card-base card-hover cursor-pointer"><div class="card-content flex items-start gap-4"><img src="/assets/icons/visual_studio.png" alt="Visual Studio" class="card-icon"><div class="flex-1 min-w-0"><h3 class="card-title">Visual Studio<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-arrow-up-right card-arrow"><path d="M7 7h10v10"></path><path d="M7 17 17 7"></path></svg></h3><p class="card-description">Extension for Microsoft Visual Studio</p></div></div></div><div class="card-base card-hover cursor-pointer"><div class="card-content flex items-start gap-4"><img src="/assets/icons/sublime.png" alt="Sublime Text" class="card-icon"><div class="flex-1 min-w-0"><h3 class="card-title">Sublime Text<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-arrow-up-right card-arrow"><path d="M7 7h10v10"></path><path d="M7 17 17 7"></path></svg></h3><p class="card-description">Package for Sublime Text editor</p></div></div></div><div class="card-base card-hover cursor-pointer"><div class="card-content flex items-start gap-4"><img src="/assets/icons/balanced_neovim_logo.png" alt="Neovim" class="card-icon"><div class="flex-1 min-w-0"><h3 class="card-title">Neovim<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-arrow-up-right card-arrow"><path d="M7 7h10v10"></path><path d="M7 17 17 7"></path></svg></h3><p class="card-description">Plugin for Neovim text editor</p></div></div></div><div class="card-base card-hover cursor-pointer"><div class="card-content flex items-start gap-4"><img src="/assets/icons/jupyter_dark.png" alt="JupyterLab" class="card-icon"><div class="flex-1 min-w-0"><h3 class="card-title">JupyterLab<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-arrow-up-right card-arrow"><path d="M7 7h10v10"></path><path d="M7 17 17 7"></path></svg></h3><p class="card-description">Extension for JupyterLab notebooks</p></div></div></div></div></div><div class="mt-12"><h2 class="text-2xl font-bold mb-6">Web Browsers</h2><div class="space-y-6"><div class="card-base"><div class="card-content text-center"><div class="flex justify-center mb-6"><div class="grid grid-cols-3 sm:grid-cols-5 gap-6 sm:gap-8 max-w-2xl"><div class="flex flex-col items-center p-4 rounded"><img src="/assets/icons/google_chrome.png" alt="Google Chrome" class="w-10 h-10 object-contain"></div><div class="flex flex-col items-center p-4 rounded"><img src="/assets/icons/microsoft_edge.png" alt="Microsoft Edge" class="w-10 h-10 object-contain"></div><div class="flex flex-col items-center p-4 rounded"><img src="/assets/icons/firefox.png" alt="Mozilla Firefox" class="w-10 h-10 object-contain"></div><div class="flex flex-col items-center p-4 rounded"><img src="/assets/icons/brave.png" alt="Brave" class="w-10 h-10 object-contain"></div><div class="flex flex-col items-center p-4 rounded"><img src="/assets/icons/opera.png" alt="Opera" class="w-10 h-10 object-contain"></div><div class="flex flex-col items-center p-4 rounded sm:hidden"><img src="/assets/icons/default_browser_svg.png" alt="Default Browser" class="w-10 h-10 object-contain"></div></div></div><h3 class="text-xl font-semibold mb-2">Browser Extensions</h3><p class="text-sm text-muted-foreground mb-6">Available for all major web browsers</p><a href="/products/web-extension" target="_blank" rel="noopener noreferrer"><button class="inline-flex items-center justify-center whitespace-nowrap text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&amp;_svg]:pointer-events-none [&amp;_svg]:size-4 [&amp;_svg]:shrink-0 bg-primary text-primary-foreground hover:bg-primary/90 h-9 rounded-md px-3 gap-2">Get Started<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-arrow-up-right w-4 h-4"><path d="M7 7h10v10"></path><path d="M7 17 17 7"></path></svg></button></a></div></div></div></div><div class="mt-12"><h2 class="text-2xl font-bold mb-6">Productivity &amp; Communication</h2><div class="responsive-grid grid-auto-fit"><div class="card-base card-hover cursor-pointer"><div class="card-content flex items-start gap-4"><img src="/assets/icons/obsidian.png" alt="Obsidian" class="card-icon"><div class="flex-1 min-w-0"><h3 class="card-title">Obsidian<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-arrow-up-right card-arrow"><path d="M7 7h10v10"></path><path d="M7 17 17 7"></path></svg></h3><p class="card-description">Plugin for Obsidian knowledge management</p></div></div></div><div class="card-base card-hover cursor-pointer"><div class="card-content flex items-start gap-4"><img src="/assets/icons/command_prompt.png" alt="Pieces CLI" class="card-icon"><div class="flex-1 min-w-0"><h3 class="card-title">Pieces CLI<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-arrow-up-right card-arrow"><path d="M7 7h10v10"></path><path d="M7 17 17 7"></path></svg></h3><p class="card-description">Command-line interface for Pieces</p></div></div></div><div class="card-base card-hover cursor-pointer"><div class="card-content flex items-start gap-4"><img src="/assets/icons/new_raycast_1.png" alt="Raycast" class="card-icon"><div class="flex-1 min-w-0"><h3 class="card-title">Raycast<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-arrow-up-right card-arrow"><path d="M7 7h10v10"></path><path d="M7 17 17 7"></path></svg></h3><p class="card-description">Extension for Raycast productivity tool</p></div></div></div></div></div></div></section><footer class="border-t border-border py-12 mt-24"><div class="container-responsive"><div class="grid md:grid-cols-3 gap-8 mb-8"><div><h3 class="font-semibold mb-4">Socials</h3><ul class="space-y-2"><li><a href="https://pieces.app/discord" target="_blank" rel="noopener noreferrer" class="text-sm text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1">Discord <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-arrow-up-right w-3 h-3"><path d="M7 7h10v10"></path><path d="M7 17 17 7"></path></svg></a></li><li><a href="https://twitter.com/getpieces" target="_blank" rel="noopener noreferrer" class="text-sm text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1">Twitter <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-arrow-up-right w-3 h-3"><path d="M7 7h10v10"></path><path d="M7 17 17 7"></path></svg></a></li><li><a href="https://youtube.com/@getpieces" target="_blank" rel="noopener noreferrer" class="text-sm text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1">YouTube <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-arrow-up-right w-3 h-3"><path d="M7 7h10v10"></path><path d="M7 17 17 7"></path></svg></a></li><li><a href="https://instagram.com/getpieces" target="_blank" rel="noopener noreferrer" class="text-sm text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1">Instagram <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-arrow-up-right w-3 h-3"><path d="M7 7h10v10"></path><path d="M7 17 17 7"></path></svg></a></li><li><a href="https://github.com/orgs/pieces-app" target="_blank" rel="noopener noreferrer" class="text-sm text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1">GitHub <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-arrow-up-right w-3 h-3"><path d="M7 7h10v10"></path><path d="M7 17 17 7"></path></svg></a></li><li><a href="https://linkedin.com/company/getpieces" target="_blank" rel="noopener noreferrer" class="text-sm text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1">LinkedIn <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-arrow-up-right w-3 h-3"><path d="M7 7h10v10"></path><path d="M7 17 17 7"></path></svg></a></li><li><a href="https://facebook.com/getpieces" target="_blank" rel="noopener noreferrer" class="text-sm text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1">Facebook <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-arrow-up-right w-3 h-3"><path d="M7 7h10v10"></path><path d="M7 17 17 7"></path></svg></a></li></ul></div><div><h3 class="font-semibold mb-4">Resources</h3><ul class="space-y-2"><li><a href="https://code.pieces.app/blog" target="_blank" rel="noopener noreferrer" class="text-sm text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1">Blog <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-arrow-up-right w-3 h-3"><path d="M7 7h10v10"></path><path d="M7 17 17 7"></path></svg></a></li><li><a href="https://code.pieces.app/updates" target="_blank" rel="noopener noreferrer" class="text-sm text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1">Product Updates <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-arrow-up-right w-3 h-3"><path d="M7 7h10v10"></path><path d="M7 17 17 7"></path></svg></a></li><li><a href="https://pieces.app/news" target="_blank" rel="noopener noreferrer" class="text-sm text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1">Press <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-arrow-up-right w-3 h-3"><path d="M7 7h10v10"></path><path d="M7 17 17 7"></path></svg></a></li><li><a href="https://thepiecespost.beehiiv.com/" target="_blank" rel="noopener noreferrer" class="text-sm text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1">Newsletter <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-arrow-up-right w-3 h-3"><path d="M7 7h10v10"></path><path d="M7 17 17 7"></path></svg></a></li></ul></div><div><h3 class="font-semibold mb-4">Terms &amp; Policies</h3><ul class="space-y-2"><li><a href="https://pieces.app/legal/privacy-policy" target="_blank" rel="noopener noreferrer" class="text-sm text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1">Privacy Policy <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-arrow-up-right w-3 h-3"><path d="M7 7h10v10"></path><path d="M7 17 17 7"></path></svg></a></li><li><a href="https://pieces.app/legal/terms" target="_blank" rel="noopener noreferrer" class="text-sm text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1">Terms of Service <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-arrow-up-right w-3 h-3"><path d="M7 7h10v10"></path><path d="M7 17 17 7"></path></svg></a></li></ul></div></div><div class="pt-8 border-t border-border"><div class="flex flex-col md:flex-row justify-between items-center gap-4"><div class="flex items-center gap-2"><img src="/assets/icons/pieces_filled.svg" alt="Pieces" class="w-6 h-6"><span class="font-bold">Pieces for Developers</span></div><p class="text-sm text-muted-foreground">Copyright © 2025 Mesh Intelligent Technologies, Inc. All rights reserved.</p></div></div></div></footer></div></div>
+</main>
+</noscript>
+
+
+
+</body></html>
