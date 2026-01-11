@@ -2,7 +2,7 @@ import { state, elements } from './state.js';
 import { setupCanvas, redrawCanvas, zoom } from './canvas.js';
 import { updateLayerList, updateActiveTool, updateStatusBar, toggleGrid, showDevTools } from './ui.js';
 import { floodFill } from './fill.js';
-import { initCursors, setupCursorKeyboardShortcuts, setPipetteCursor, resetCursor } from './cursors.js';
+import { initCursors, setupCursorKeyboardShortcuts, setPipetteCursor, setPencilCursor, setEraserCursor, resetCursor } from './cursors.js';
 import { getPathBoundingBox, doRectanglesIntersect } from './geometry.js';
 
 // --- Functions that were in script.js ---
@@ -22,6 +22,17 @@ function init() {
 function setupUI() {
   updateLayerList();
   updateActiveTool(document.querySelector('.tool-btn.active'));
+  
+  // Set initial cursor based on default tool
+  if (state.selectionTool === 'pencil') {
+    setPencilCursor();
+  } else if (state.selectionTool === 'eraser') {
+    setEraserCursor();
+  } else if (state.selectionTool === 'color-picker') {
+    setPipetteCursor();
+  } else if (state.selectionTool === 'grid-draw') {
+    elements.canvas.style.cursor = 'crosshair';
+  }
   
   // Disable context menu on color pickers
   elements.brushColorPicker.oncontextmenu = () => false;
@@ -251,6 +262,19 @@ function setupEventListeners() {
         state.selectionTool = tool;
         updateActiveTool(btn);
       }
+      
+      // Set cursor based on tool
+      if (state.selectionTool === 'pencil') {
+        setPencilCursor();
+      } else if (state.selectionTool === 'eraser') {
+        setEraserCursor();
+      } else if (state.selectionTool === 'color-picker') {
+        setPipetteCursor();
+      } else if (state.selectionTool === 'grid-draw') {
+        // Grid draw tool - use a crosshair cursor
+        elements.canvas.style.cursor = 'crosshair';
+      }
+      
       updateStatusBar(`Tool: ${state.selectionTool}`);
     });
   });
@@ -354,6 +378,8 @@ function handleCanvasMouseDown(e) {
     state.selectionTool = 'pencil';
     const pencilBtn = document.querySelector('.tool-btn[data-tool="pencil"]');
     if(pencilBtn) updateActiveTool(pencilBtn);
+    // Set pencil cursor after switching back
+    setPencilCursor();
     updateStatusBar(`Tool: ${state.selectionTool}`);
     return;
   }
@@ -662,8 +688,19 @@ function handleKeyUp(e) {
     state.altKeyDown = false;
     // Restore previous tool
     state.selectionTool = state.previousTool;
-    // Reset cursor to default
-    resetCursor();
+    // Restore cursor based on the tool being restored
+    if (state.selectionTool === 'pencil') {
+      setPencilCursor();
+    } else if (state.selectionTool === 'eraser') {
+      setEraserCursor();
+    } else if (state.selectionTool === 'color-picker') {
+      setPipetteCursor();
+    } else if (state.selectionTool === 'grid-draw') {
+      elements.canvas.style.cursor = 'crosshair';
+    } else {
+      // For other tools, reset cursor
+      resetCursor();
+    }
     updateStatusBar(`Tool: ${state.selectionTool}`);
   }
 }

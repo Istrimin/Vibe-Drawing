@@ -242,9 +242,55 @@ export function setPipetteCursor() {
     setCursor(pipetteCursor);
 }
 
-// Reset cursor to default
+// Set pencil cursor for pencil tool
+export function setPencilCursor() {
+    const pencilCursor = 'url(cursors/pencil.png) 0 0, auto';
+    setCursor(pencilCursor);
+}
+
+// Set eraser cursor for eraser tool
+export function setEraserCursor() {
+    const eraserCursor = 'url(cursors/eraser.png) 0 0, auto';
+    setCursor(eraserCursor);
+}
+
+// Reset cursor to default (based on current tool)
 export function resetCursor() {
     if (drawingCanvas) {
-        drawingCanvas.style.cursor = cursorState.currentCursor;
+        // Import state dynamically to avoid circular dependency
+        import('./state.js').then(({ state }) => {
+            // If Alt key is down, we should show pipette cursor
+            if (state.altKeyDown) {
+                setPipetteCursor();
+                return;
+            }
+            
+            // Get cursor based on current tool
+            const toolCursor = getCursorForTool(state.selectionTool);
+            
+            // Only set cursor if we have a specific tool cursor, otherwise use default
+            if (toolCursor !== 'auto') {
+                drawingCanvas.style.cursor = toolCursor;
+            } else {
+                drawingCanvas.style.cursor = cursorState.currentCursor;
+            }
+        }).catch(err => {
+            console.warn('Could not import state:', err);
+            drawingCanvas.style.cursor = 'auto';
+        });
+    }
+}
+
+// Get cursor value for a specific tool
+export function getCursorForTool(tool) {
+    switch(tool) {
+        case 'pencil':
+            return 'url(cursors/pencil.png) 0 0, auto';
+        case 'eraser':
+            return 'url(cursors/eraser.png) 0 0, auto';
+        case 'color-picker':
+            return 'url(cursors/pipette32.png) 0 0, auto';
+        default:
+            return 'auto';
     }
 }
