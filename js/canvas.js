@@ -100,6 +100,9 @@ export function redrawCanvas() {
     });
   }
 
+  // Draw ghost preview for move operation
+  drawGhostPreview();
+
   state.ctx.restore();
 }
 
@@ -213,11 +216,11 @@ function drawSelection(img) {
 function drawObjectSelection(obj) {
     let bbox;
     if (obj.type === 'image') {
-        bbox = { minX: obj.x, minY: obj.y, maxX: obj.x + obj.width, maxY: obj.y + obj.height };
+        bbox = { minX: obj.obj.x, minY: obj.obj.y, maxX: obj.obj.x + obj.obj.width, maxY: obj.obj.y + obj.obj.height };
     } else if (obj.type === 'path') {
-        bbox = getPathBoundingBox(obj.path);
+        bbox = getPathBoundingBox(obj.obj);
     } else if (obj.type === 'grid-cell') {
-        bbox = { minX: obj.x, minY: obj.y, maxX: obj.x + state.gridSize, maxY: obj.y + state.gridSize };
+        bbox = { minX: obj.obj.x, minY: obj.obj.y, maxX: obj.obj.x + state.gridSize, maxY: obj.obj.y + state.gridSize };
     }
 
     if (bbox) {
@@ -227,4 +230,48 @@ function drawObjectSelection(obj) {
         state.ctx.strokeRect(bbox.minX, bbox.minY, bbox.maxX - bbox.minX, bbox.maxY - bbox.minY);
         state.ctx.setLineDash([]);
     }
+}
+
+function drawGhostPreview() {
+    if (!state.isGhostVisible || state.selectedObjects.length === 0) return;
+
+    const offset = state.ghostOffset;
+    state.ctx.globalAlpha = 0.5; // Semi-transparent
+
+    state.selectedObjects.forEach(selected => {
+        if (selected.type === 'image') {
+            const img = selected.obj;
+            state.ctx.save();
+            state.ctx.translate(img.x + offset.x + img.width / 2, img.y + offset.y + img.height / 2);
+            state.ctx.rotate(img.rotation);
+            state.ctx.drawImage(
+                getImageFromData(img.src),
+                -img.width / 2,
+                -img.height / 2,
+                img.width,
+                img.height
+            );
+            state.ctx.restore();
+        } else if (selected.type === 'path') {
+            const path = selected.obj;
+            if (path.length > 1) {
+                state.ctx.beginPath();
+                state.ctx.moveTo(path[0].x + offset.x, path[0].y + offset.y);
+                for (let i = 1; i < path.length; i++) {
+                    state.ctx.lineTo(path[i].x + offset.x, path[i].y + offset.y);
+                }
+                state.ctx.strokeStyle = path[0].color;
+                state.ctx.lineWidth = path[0].size;
+                state.ctx.lineCap = 'round';
+                state.ctx.lineJoin = 'round';
+                state.ctx.stroke();
+            }
+        } else if (selected.type === 'grid-cell') {
+            const cell = selected.obj;
+            state.ctx.fillStyle = cell.color;
+            state.ctx.fillRect(cell.x + offset.x, cell.y + offset.y, state.gridSize, state.gridSize);
+        }
+    });
+
+    state.ctx.globalAlpha = 1.0; // Reset opacity
 }

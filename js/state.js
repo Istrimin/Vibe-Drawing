@@ -40,7 +40,9 @@ export const state = {
   lastGridCell: { x: null, y: null },
   selectionPath: [],
   selectedObjects: [],
-  isMovingSelection: false
+  isMovingSelection: false,
+  ghostOffset: { x: 0, y: 0 },
+  isGhostVisible: false
 };
 
 // DOM Elements

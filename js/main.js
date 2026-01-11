@@ -293,7 +293,7 @@ function setupEventListeners() {
 function handleCanvasMouseDown(e) {
   const pos = getMousePosition(e);
 
-  // Handle Moving Selection
+  // Handle Moving Selection with Ctrl key - now with visual ghost preview
   if (e.ctrlKey && state.selectedObjects.length > 0) {
     const clickedOnSelection = state.selectedObjects.some(obj => {
         let bbox;
@@ -307,12 +307,17 @@ function handleCanvasMouseDown(e) {
     if (clickedOnSelection) {
         state.isMovingSelection = true;
         state.dragStart = pos;
+        state.ghostOffset = { x: 0, y: 0 };
+        state.isGhostVisible = true;
+        elements.canvas.style.cursor = 'move';
+        // Save state BEFORE moving for proper undo
+        saveStateToUndoStack();
         return;
     }
   }
 
-  // Clear selection if clicking outside
-  if (state.selectedObjects.length > 0) {
+  // Clear selection if clicking outside (and not holding Ctrl)
+  if (state.selectedObjects.length > 0 && !e.ctrlKey) {
       state.selectedObjects = [];
       redrawCanvas();
   }
@@ -424,12 +429,18 @@ function handleCanvasMouseDown(e) {
     if (isOnResizeHandle(pos, clickedImage)) {
       state.isResizing = true;
       state.resizeStart = { x: pos.x, y: pos.y, width: clickedImage.width, height: clickedImage.height };
+      // Save state BEFORE resizing for proper undo
+      saveStateToUndoStack();
     } else if (isOnRotationHandle(pos, clickedImage)) {
       state.isRotating = true;
       state.rotateStart = { angle: clickedImage.rotation, x: pos.x, y: pos.y };
+      // Save state BEFORE rotating for proper undo
+      saveStateToUndoStack();
     } else {
       state.isDragging = true;
       state.dragStart = { x: pos.x - clickedImage.x, y: pos.y - clickedImage.y };
+      // Save state BEFORE moving for proper undo
+      saveStateToUndoStack();
     }
   } else {
     // Start a new selection
@@ -486,19 +497,8 @@ function handleCanvasMouseMove(e) {
     const dx = pos.x - state.dragStart.x;
     const dy = pos.y - state.dragStart.y;
 
-    state.selectedObjects.forEach(selected => {
-        if (selected.type === 'image' || selected.type === 'grid-cell') {
-            selected.obj.x += dx;
-            selected.obj.y += dy;
-        } else if (selected.type === 'path') {
-            selected.obj.forEach(point => {
-                point.x += dx;
-                point.y += dy;
-            });
-        }
-    });
-
-    state.dragStart = pos; // Update drag start for next move event
+    // Update ghost offset for visual preview instead of moving objects directly
+    state.ghostOffset = { x: dx, y: dy };
     redrawCanvas();
     return;
   }
@@ -550,7 +550,28 @@ function handleCanvasMouseUp(e) {
 
   if (state.isMovingSelection) {
     state.isMovingSelection = false;
-    // State already saved in mousedown
+    
+    // Apply the ghost offset to actual objects
+    if (state.ghostOffset && (state.ghostOffset.x !== 0 || state.ghostOffset.y !== 0)) {
+      state.selectedObjects.forEach(selected => {
+        if (selected.type === 'image' || selected.type === 'grid-cell') {
+          selected.obj.x += state.ghostOffset.x;
+          selected.obj.y += state.ghostOffset.y;
+        } else if (selected.type === 'path') {
+          selected.obj.forEach(point => {
+            point.x += state.ghostOffset.x;
+            point.y += state.ghostOffset.y;
+          });
+        }
+      });
+    }
+    
+    // Hide ghost
+    state.isGhostVisible = false;
+    state.ghostOffset = { x: 0, y: 0 };
+    
+    // Redraw canvas to show objects in new positions
+    redrawCanvas();
   }
 
   if (state.isDragging || state.isResizing || state.isRotating) {
@@ -685,17 +706,54 @@ function handleKeyDown(e) {
     redrawCanvas();
     updateStatusBar('Image deleted');
   }
+  
+  // Delete selected objects (rect-select/lasso selections)
+  if (e.key === 'Delete' && state.selectedObjects.length > 0) {
+    // Save state BEFORE making changes for proper undo
+    saveStateToUndoStack();
+    
+    // Remove all selected objects
+    state.selectedObjects.forEach(selected => {
+      if (selected.type === 'image') {
+        state.images = state.images.filter(img => img !== selected.obj);
+      } else if (selected.type === 'path') {
+        state.drawingPaths = state.drawingPaths.filter(path => path !== selected.obj);
+      } else if (selected.type === 'grid-cell') {
+        state.gridCells = state.gridCells.filter(cell => cell !== selected.obj);
+      }
+    });
+    
+    state.selectedObjects = [];
+    redrawCanvas();
+    updateStatusBar('Selected objects deleted');
+  }
+
+  // Undo with Ctrl+Z (with Ctrl)
   if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
+    e.preventDefault();
     undo();
+    return;
   }
+  
+  // Redo with Ctrl+Y (with Ctrl)
   if ((e.ctrlKey || e.metaKey) && e.key === 'y') {
+    e.preventDefault();
     redo();
+    return;
   }
-  if (e.code === 'KeyZ') {
+  
+  // Undo with Z key (without Ctrl)
+  if (e.code === 'KeyZ' && !e.ctrlKey && !e.metaKey) {
+    e.preventDefault();
     undo();
+    return;
   }
-  if (e.code === 'KeyX') {
+  
+  // Redo with X key (without Ctrl)
+  if (e.code === 'KeyX' && !e.ctrlKey && !e.metaKey) {
+    e.preventDefault();
     redo();
+    return;
   }
 }
 
