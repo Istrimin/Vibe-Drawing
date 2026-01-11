@@ -1,5 +1,6 @@
 import { elements, state } from './state.js';
 import { redrawCanvas } from './canvas.js';
+import { clearCanvas } from './canvas.js';
 
 export function updateActiveTool(activeBtn) {
   elements.toolButtons.forEach(btn => btn.classList.remove('active'));

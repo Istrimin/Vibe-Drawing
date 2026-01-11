@@ -27,6 +27,7 @@ export const state = {
   eraserSize: 20,
   showGrid: true,
   gridSize: 50,
+  gridType: 'square',
   gridColor: '#006400',
   backgroundColor: '#2d2d2d',
   spacebarDown: false,
@@ -41,7 +42,8 @@ export const state = {
   selectedObjects: [],
   isMovingSelection: false,
   ghostOffset: { x: 0, y: 0 },
-  isGhostVisible: false
+  isGhostVisible: false,
+  gridTransformationMode: 'permanent' // 'permanent' or 'visual-only'
 };
 
 // DOM Elements
@@ -53,6 +55,7 @@ export const elements = {
   zoomOutBtn: document.getElementById('zoomOutBtn'),
   zoomResetBtn: document.getElementById('fitBtn'),
   toolButtons: document.querySelectorAll('.tool-btn'),
+  clearCanvasBtn: document.getElementById('clearCanvasBtn'),
   saveBtn: document.getElementById('saveBtn'),
 
   loadBtn: document.getElementById('loadBtn'),
@@ -70,6 +73,7 @@ export const elements = {
   eraserSizeSlider: document.getElementById('eraserSizeSlider'),
   eraserSizeValue: document.getElementById('eraserSizeValue'),
   symmetryBtn: document.getElementById('symmetryBtn'),
+  gridTransformBtn: document.getElementById('gridTransformBtn'),
   colorPalette: document.getElementById('colorPalette'),
   app: document.getElementById('app'),
   togglePanelsBtn: document.getElementById('toggle-panels-btn'),

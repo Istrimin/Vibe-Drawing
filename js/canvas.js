@@ -60,10 +60,33 @@ export function redrawCanvas() {
   }
 
   // Draw filled grid cells with symmetry support
-  const transformedGridCells = state.symmetry.transformGridCells(state.gridCells, state.gridSize);
-  transformedGridCells.forEach(cell => {
+  let gridCellsToDraw = state.gridCells;
+  
+  // Apply transformation based on mode
+  if (state.gridTransformationMode === 'permanent') {
+    gridCellsToDraw = state.symmetry.transformGridCells(state.gridCells, state.gridSize);
+  }
+  
+  gridCellsToDraw.forEach(cell => {
     state.ctx.fillStyle = cell.color;
-    state.ctx.fillRect(cell.x, cell.y, state.gridSize, state.gridSize);
+    
+    if (state.gridType === 'square') {
+      state.ctx.fillRect(cell.x, cell.y, state.gridSize, state.gridSize);
+    } else if (state.gridType === 'rhombus') {
+      // Draw rhombus cell
+      state.ctx.beginPath();
+      const centerX = cell.x + state.gridSize / 2;
+      const centerY = cell.y + state.gridSize / 2;
+      const halfSize = state.gridSize / 2;
+      
+      // Draw rhombus: diamond shape with 4 points
+      state.ctx.moveTo(centerX, centerY - halfSize); // Top
+      state.ctx.lineTo(centerX + halfSize, centerY); // Right
+      state.ctx.lineTo(centerX, centerY + halfSize); // Bottom
+      state.ctx.lineTo(centerX - halfSize, centerY); // Left
+      state.ctx.closePath();
+      state.ctx.fill();
+    }
   });
 
   // Draw images on top of everything else
@@ -126,7 +149,6 @@ function drawPath(path) {
     state.ctx.stroke();
   });
 }
-
 function drawGrid() {
   if (!state.showGrid) return;
   const gridSize = state.gridSize;
@@ -142,24 +164,79 @@ function drawGrid() {
   const endX = startX + visibleWidth;
   const endY = startY + visibleHeight;
 
-  const firstVerticalLine = Math.floor(startX / gridSize) * gridSize;
-  const lastVerticalLine = Math.ceil(endX / gridSize) * gridSize;
-  for (let x = firstVerticalLine; x <= lastVerticalLine; x += gridSize) {
-    state.ctx.beginPath();
-    state.ctx.moveTo(x, startY);
-    state.ctx.lineTo(x, endY);
-    state.ctx.stroke();
-  }
+  if (state.gridType === 'square') {
+    // Draw square grid (original implementation)
+    const firstVerticalLine = Math.floor(startX / gridSize) * gridSize;
+    const lastVerticalLine = Math.ceil(endX / gridSize) * gridSize;
+    for (let x = firstVerticalLine; x <= lastVerticalLine; x += gridSize) {
+      state.ctx.beginPath();
+      state.ctx.moveTo(x, startY);
+      state.ctx.lineTo(x, endY);
+      state.ctx.stroke();
+    }
 
-  const firstHorizontalLine = Math.floor(startY / gridSize) * gridSize;
-  const lastHorizontalLine = Math.ceil(endY / gridSize) * gridSize;
-  for (let y = firstHorizontalLine; y <= lastHorizontalLine; y += gridSize) {
-    state.ctx.beginPath();
-    state.ctx.moveTo(startX, y);
-    state.ctx.lineTo(endX, y);
-    state.ctx.stroke();
+    const firstHorizontalLine = Math.floor(startY / gridSize) * gridSize;
+    const lastHorizontalLine = Math.ceil(endY / gridSize) * gridSize;
+    for (let y = firstHorizontalLine; y <= lastHorizontalLine; y += gridSize) {
+      state.ctx.beginPath();
+      state.ctx.moveTo(startX, y);
+      state.ctx.lineTo(endX, y);
+      state.ctx.stroke();
+    }
+  } else if (state.gridType === 'rhombus') {
+    // Draw rhombus grid
+    // Calculate grid bounds with some padding
+    const padding = gridSize;
+    const gridStartX = Math.floor((startX - padding) / gridSize) * gridSize;
+    const gridEndX = Math.ceil((endX + padding) / gridSize) * gridSize;
+    const gridStartY = Math.floor((startY - padding) / gridSize) * gridSize;
+    const gridEndY = Math.ceil((endY + padding) / gridSize) * gridSize;
+
+    // Draw diagonal lines for rhombus grid
+    // Diagonal lines from top-left to bottom-right
+    for (let offset = gridStartX - gridEndY; offset <= gridEndX - gridStartY; offset += gridSize) {
+      state.ctx.beginPath();
+      const clipStartX = Math.max(startX, gridStartX);
+      const clipEndX = Math.min(endX, gridEndX);
+      const clipStartY = Math.max(startY, gridStartY);
+      const clipEndY = Math.min(endY, gridEndY);
+      
+      // Line equation: y = x - offset
+      const x1 = Math.max(clipStartX, clipStartY + offset);
+      const y1 = x1 - offset;
+      const x2 = Math.min(clipEndX, clipEndY + offset);
+      const y2 = x2 - offset;
+      
+      if (x1 <= x2 && y1 <= y2) {
+        state.ctx.moveTo(x1, y1);
+        state.ctx.lineTo(x2, y2);
+        state.ctx.stroke();
+      }
+    }
+
+    // Diagonal lines from top-right to bottom-left
+    for (let offset = gridStartX + gridStartY; offset <= gridEndX + gridEndY; offset += gridSize) {
+      state.ctx.beginPath();
+      const clipStartX = Math.max(startX, gridStartX);
+      const clipEndX = Math.min(endX, gridEndX);
+      const clipStartY = Math.max(startY, gridStartY);
+      const clipEndY = Math.min(endY, gridEndY);
+      
+      // Line equation: y = -x + offset
+      const x1 = Math.max(clipStartX, offset - clipEndY);
+      const y1 = -x1 + offset;
+      const x2 = Math.min(clipEndX, offset - clipStartY);
+      const y2 = -x2 + offset;
+      
+      if (x1 <= x2 && y1 >= y2) {
+        state.ctx.moveTo(x1, y1);
+        state.ctx.lineTo(x2, y2);
+        state.ctx.stroke();
+      }
+    }
   }
 }
+
 
 function drawLassoPath() {
     if (state.selectionPath.length < 2) return;
@@ -221,7 +298,20 @@ function drawObjectSelection(obj) {
     } else if (obj.type === 'path') {
         bbox = getPathBoundingBox(obj.obj);
     } else if (obj.type === 'grid-cell') {
-        bbox = { minX: obj.obj.x, minY: obj.obj.y, maxX: obj.obj.x + state.gridSize, maxY: obj.obj.y + state.gridSize };
+        if (state.gridType === 'square') {
+            bbox = { minX: obj.obj.x, minY: obj.obj.y, maxX: obj.obj.x + state.gridSize, maxY: obj.obj.y + state.gridSize };
+        } else if (state.gridType === 'rhombus') {
+            // For rhombus, calculate bounding box that encompasses the diamond shape
+            const centerX = obj.obj.x + state.gridSize / 2;
+            const centerY = obj.obj.y + state.gridSize / 2;
+            const halfSize = state.gridSize / 2;
+            bbox = {
+                minX: centerX - halfSize,
+                minY: centerY - halfSize,
+                maxX: centerX + halfSize,
+                maxY: centerY + halfSize
+            };
+        }
     }
 
     if (bbox) {
@@ -270,9 +360,44 @@ function drawGhostPreview() {
         } else if (selected.type === 'grid-cell') {
             const cell = selected.obj;
             state.ctx.fillStyle = cell.color;
-            state.ctx.fillRect(cell.x + offset.x, cell.y + offset.y, state.gridSize, state.gridSize);
+            
+            if (state.gridType === 'square') {
+                state.ctx.fillRect(cell.x + offset.x, cell.y + offset.y, state.gridSize, state.gridSize);
+            } else if (state.gridType === 'rhombus') {
+                // Draw rhombus cell for ghost preview
+                state.ctx.beginPath();
+                const centerX = cell.x + offset.x + state.gridSize / 2;
+                const centerY = cell.y + offset.y + state.gridSize / 2;
+                const halfSize = state.gridSize / 2;
+                
+                // Draw rhombus: diamond shape with 4 points
+                state.ctx.moveTo(centerX, centerY - halfSize); // Top
+                state.ctx.lineTo(centerX + halfSize, centerY); // Right
+                state.ctx.lineTo(centerX, centerY + halfSize); // Bottom
+                state.ctx.lineTo(centerX - halfSize, centerY); // Left
+                state.ctx.closePath();
+                state.ctx.fill();
+            }
         }
     });
 
     state.ctx.globalAlpha = 1.0; // Reset opacity
+}
+
+export function clearCanvas() {
+  // Clear all drawing data
+  state.drawingPaths = [];
+  state.currentPath = [];
+  state.gridCells = [];
+  state.images = [];
+  state.selectedObjects = [];
+  
+  // Clear the canvas
+  if (state.ctx) {
+    state.ctx.fillStyle = state.backgroundColor;
+    state.ctx.fillRect(0, 0, state.canvas.width, state.canvas.height);
+  }
+  
+  redrawCanvas();
+  updateStatusBar('Canvas cleared');
 }

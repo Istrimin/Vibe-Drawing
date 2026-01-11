@@ -1,5 +1,5 @@
 import { state, elements } from './state.js';
-import { setupCanvas, redrawCanvas, zoom } from './canvas.js';
+import { setupCanvas, redrawCanvas, zoom, clearCanvas } from './canvas.js';
 import { updateActiveTool, updateStatusBar, toggleGrid, showDevTools } from './ui.js';
 
 import { floodFill } from './fill.js';
@@ -64,6 +64,7 @@ function setupEventListeners() {
   elements.zoomInBtn.addEventListener('click', () => zoom(1.2));
   elements.zoomOutBtn.addEventListener('click', () => zoom(0.8));
   elements.zoomResetBtn.addEventListener('click', () => zoom(1));
+  elements.clearCanvasBtn.addEventListener('click', clearCanvas);
   elements.saveBtn.addEventListener('click', saveState);
   elements.loadBtn.addEventListener('click', loadState);
 
@@ -190,12 +191,28 @@ function setupEventListeners() {
   elements.toggleRightToolbarCb.addEventListener('change', (e) => {
     elements.app.classList.toggle('right-toolbar-hidden', !e.target.checked);
   });
-
-  // Symmetry panel logic
-  elements.symmetryBtn.addEventListener('click', (e) => {
-    elements.symmetryPanel.classList.toggle('hidden');
-    e.stopPropagation();
+// Grid type buttons
+const gridTypeBtns = document.querySelectorAll('.grid-type-btn');
+gridTypeBtns.forEach(btn => {
+  btn.addEventListener('click', () => {
+    const type = btn.dataset.gridType;
+    state.gridType = type;
+    
+    // Update active class on all grid type buttons
+    gridTypeBtns.forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    
+    redrawCanvas();
+    updateStatusBar(`Grid: ${type}`);
   });
+});
+
+// Symmetry panel logic
+elements.symmetryBtn.addEventListener('click', (e) => {
+  elements.symmetryPanel.classList.toggle('hidden');
+  e.stopPropagation();
+});
+
 
   // Hide symmetry panel on outside click
   document.addEventListener('click', (e) => {
@@ -231,6 +248,22 @@ function setupEventListeners() {
       const count = parseInt(e.target.value, 10);
       state.symmetry.setRays(count);
   });
+
+  // Grid transformation mode button
+  elements.gridTransformBtn.addEventListener('click', () => {
+    if (state.gridTransformationMode === 'permanent') {
+      state.gridTransformationMode = 'visual-only';
+      elements.gridTransformBtn.setAttribute('data-mode', 'visual-only');
+      elements.gridTransformBtn.title = 'Grid Transformation: Visual Only (Grid type changes only affect view)';
+      updateStatusBar('Grid mode: Visual only (no permanent changes)');
+    } else {
+      state.gridTransformationMode = 'permanent';
+      elements.gridTransformBtn.setAttribute('data-mode', 'permanent');
+      elements.gridTransformBtn.title = 'Grid Transformation: Permanent (Grid type changes affect saved data)';
+      updateStatusBar('Grid mode: Permanent (saved with data)');
+    }
+    redrawCanvas();
+ });
 
   // Dev tools
   const devToolsBtn = document.getElementById('devToolsBtn');
@@ -885,7 +918,6 @@ function getMousePosition(e) {
     y: (e.clientY - rect.top - state.panOffset.y) / state.zoomLevel
   };
 }
-
 // HISTORY
 function saveStateToUndoStack() {
   // When symmetry is active, save the expanded grid cells for consistent undo/redo
@@ -901,7 +933,9 @@ function saveStateToUndoStack() {
     symmetry: {
       mode: state.symmetry.mode,
       radialRays: state.symmetry.radialRays
-    }
+    },
+    gridType: state.gridType,
+    gridTransformationMode: state.gridTransformationMode
   }));
   state.undoStack.push(stateCopy);
   state.redoStack = [];
@@ -909,6 +943,7 @@ function saveStateToUndoStack() {
     state.undoStack.shift();
   }
 }
+
 
 function undo() {
   if (state.undoStack.length > 0) {
@@ -919,7 +954,9 @@ function undo() {
       symmetry: {
         mode: state.symmetry.mode,
         radialRays: state.symmetry.radialRays
-      }
+      },
+      gridType: state.gridType,
+      gridTransformationMode: state.gridTransformationMode
     };
     state.redoStack.push(currentState);
     const previousState = state.undoStack.pop();
@@ -947,11 +984,38 @@ function undo() {
       document.getElementById('symmetryBtn').classList.toggle('active', state.symmetry.isActive());
     }
     
+    // Restore grid type if it was saved
+    if (previousState.gridType) {
+      state.gridType = previousState.gridType;
+      
+      // Update UI to reflect the restored grid type
+      const activeGridBtn = document.querySelector(`.grid-type-btn[data-grid-type="${state.gridType}"]`);
+      if (activeGridBtn) {
+        document.querySelectorAll('.grid-type-btn').forEach(btn => btn.classList.remove('active'));
+        activeGridBtn.classList.add('active');
+      }
+    }
+    
+    // Restore grid transformation mode if it was saved
+    if (previousState.gridTransformationMode) {
+      state.gridTransformationMode = previousState.gridTransformationMode;
+      
+      // Update UI to reflect the restored grid transformation mode
+      if (elements.gridTransformBtn) {
+        elements.gridTransformBtn.setAttribute('data-mode', state.gridTransformationMode);
+        
+        if (state.gridTransformationMode === 'visual-only') {
+          elements.gridTransformBtn.title = 'Grid Transformation: Visual Only (Grid type changes only affect view)';
+        } else {
+          elements.gridTransformBtn.title = 'Grid Transformation: Permanent (Grid type changes affect saved data)';
+        }
+      }
+    }
+    
     redrawCanvas();
     updateStatusBar('Undo');
   }
 }
-
 function redo() {
   if (state.redoStack.length > 0) {
     const currentState = {
@@ -961,7 +1025,9 @@ function redo() {
       symmetry: {
         mode: state.symmetry.mode,
         radialRays: state.symmetry.radialRays
-      }
+      },
+      gridType: state.gridType,
+      gridTransformationMode: state.gridTransformationMode
     };
     state.undoStack.push(currentState);
     const nextState = state.redoStack.pop();
@@ -989,6 +1055,34 @@ function redo() {
       document.getElementById('symmetryBtn').classList.toggle('active', state.symmetry.isActive());
     }
     
+    // Restore grid type if it was saved
+    if (nextState.gridType) {
+      state.gridType = nextState.gridType;
+      
+      // Update UI to reflect the restored grid type
+      const activeGridBtn = document.querySelector(`.grid-type-btn[data-grid-type="${state.gridType}"]`);
+      if (activeGridBtn) {
+        document.querySelectorAll('.grid-type-btn').forEach(btn => btn.classList.remove('active'));
+        activeGridBtn.classList.add('active');
+      }
+    }
+    
+    // Restore grid transformation mode if it was saved
+    if (nextState.gridTransformationMode) {
+      state.gridTransformationMode = nextState.gridTransformationMode;
+      
+      // Update UI to reflect the restored grid transformation mode
+      if (elements.gridTransformBtn) {
+        elements.gridTransformBtn.setAttribute('data-mode', state.gridTransformationMode);
+        
+        if (state.gridTransformationMode === 'visual-only') {
+          elements.gridTransformBtn.title = 'Grid Transformation: Visual Only (Grid type changes only affect view)';
+        } else {
+          elements.gridTransformBtn.title = 'Grid Transformation: Permanent (Grid type changes affect saved data)';
+        }
+      }
+    }
+    
     redrawCanvas();
     updateStatusBar('Redo');
   }
@@ -1010,7 +1104,10 @@ function saveState() {
     symmetry: {
       mode: state.symmetry.mode,
       radialRays: state.symmetry.radialRays
-    }
+    },
+    // Save grid type and other grid settings
+    gridType: state.gridType,
+    gridTransformationMode: state.gridTransformationMode
   };
   localStorage.setItem('vibeDrawingState', JSON.stringify(stateToSave));
   updateStatusBar('State saved');
@@ -1044,10 +1141,39 @@ function loadState() {
       document.getElementById('symmetryBtn').classList.toggle('active', state.symmetry.isActive());
     }
     
+    // Restore grid type if it was saved
+    if (parsedState.gridType) {
+      state.gridType = parsedState.gridType;
+      
+      // Update UI to reflect the loaded grid type
+      const activeGridBtn = document.querySelector(`.grid-type-btn[data-grid-type="${state.gridType}"]`);
+      if (activeGridBtn) {
+        document.querySelectorAll('.grid-type-btn').forEach(btn => btn.classList.remove('active'));
+        activeGridBtn.classList.add('active');
+      }
+    }
+    
+    // Restore grid transformation mode if it was saved
+    if (parsedState.gridTransformationMode) {
+      state.gridTransformationMode = parsedState.gridTransformationMode;
+      
+      // Update UI to reflect the loaded grid transformation mode
+      if (elements.gridTransformBtn) {
+        elements.gridTransformBtn.setAttribute('data-mode', state.gridTransformationMode);
+        
+        if (state.gridTransformationMode === 'visual-only') {
+          elements.gridTransformBtn.title = 'Grid Transformation: Visual Only (Grid type changes only affect view)';
+        } else {
+          elements.gridTransformBtn.title = 'Grid Transformation: Permanent (Grid type changes affect saved data)';
+        }
+      }
+    }
+    
     redrawCanvas();
     updateStatusBar('State loaded');
   }
 }
+
 
 
 function exportAsImage() {
