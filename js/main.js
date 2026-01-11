@@ -15,7 +15,6 @@ function init() {
   setupCursorKeyboardShortcuts();
   setupUI();
   loadState();
-  saveStateToUndoStack(); // Save initial blank canvas state for undo
   updateStatusBar('Ready');
 }
 
@@ -329,6 +328,8 @@ function handleCanvasMouseDown(e) {
   // Grid Draw Tool Handling (Left-click to draw, Right-click to erase)
   if (state.selectionTool === 'grid-draw') {
     state.isDrawing = true; // Start drawing state for grid
+    // Save state BEFORE making changes for proper undo
+    saveStateToUndoStack();
     const gridSize = state.gridSize;
     const cellX = Math.floor(pos.x / gridSize) * gridSize;
     const cellY = Math.floor(pos.y / gridSize) * gridSize;
@@ -349,7 +350,6 @@ function handleCanvasMouseDown(e) {
     }
     
     redrawCanvas();
-    saveStateToUndoStack();
     return;
   }
 
@@ -357,6 +357,8 @@ function handleCanvasMouseDown(e) {
   if (e.button === 2) {
     state.isDrawing = true;
     state.isRightClickErasing = true;
+    // Save state BEFORE making changes for proper undo
+    saveStateToUndoStack();
     state.currentPath = [{
         x: pos.x, y: pos.y,
         size: state.eraserSize,
@@ -395,11 +397,15 @@ function handleCanvasMouseDown(e) {
   }
 
   if (state.selectionTool === 'fill') {
+    // Save state BEFORE making changes for proper undo
+    saveStateToUndoStack();
     floodFill(pos.x, pos.y, state.drawingColor);
     return;
   }
 
   if (state.selectionTool === 'pencil' || state.selectionTool === 'eraser') {
+    // Save state BEFORE making changes for proper undo
+    saveStateToUndoStack();
     state.isDrawing = true;
     state.currentPath = [{
       x: pos.x,
@@ -544,11 +550,11 @@ function handleCanvasMouseUp(e) {
 
   if (state.isMovingSelection) {
     state.isMovingSelection = false;
-    saveStateToUndoStack();
+    // State already saved in mousedown
   }
 
   if (state.isDragging || state.isResizing || state.isRotating) {
-    saveStateToUndoStack();
+    // State already saved in mousedown
   }
   if (state.isPanning) {
     if (state.spacebarDown) {
@@ -561,10 +567,10 @@ function handleCanvasMouseUp(e) {
     state.isDrawing = false;
     if (state.currentPath.length > 1) {
       state.drawingPaths.push(state.currentPath);
-      saveStateToUndoStack();
+      // State already saved in mousedown
     } else if (state.selectionTool === 'grid-draw' && state.lastGridCell.x !== null) {
       // For grid draw, a single click also counts as an action for undo/redo
-      saveStateToUndoStack();
+      // State already saved in mousedown
     }
     state.currentPath = [];
     state.lastGridCell = { x: null, y: null }; // Reset last grid cell
