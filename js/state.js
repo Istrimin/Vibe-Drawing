@@ -43,7 +43,10 @@ export const state = {
   isMovingSelection: false,
   ghostOffset: { x: 0, y: 0 },
   isGhostVisible: false,
-  gridTransformationMode: 'permanent' // 'permanent' or 'visual-only'
+  gridTransformationMode: 'permanent', // 'permanent' or 'visual-only'
+  showSymmetryLine: true,
+  isCopying: false,
+  gridBrushSize: 1
 };
 
 // DOM Elements
@@ -72,6 +75,8 @@ export const elements = {
   swatchColorPicker: document.getElementById('swatchColorPicker'),
   eraserSizeSlider: document.getElementById('eraserSizeSlider'),
   eraserSizeValue: document.getElementById('eraserSizeValue'),
+  gridBrushSizeSlider: document.getElementById('gridBrushSizeSlider'),
+  gridBrushSizeValue: document.getElementById('gridBrushSizeValue'),
   symmetryBtn: document.getElementById('symmetryBtn'),
   gridTransformBtn: document.getElementById('gridTransformBtn'),
   colorPalette: document.getElementById('colorPalette'),

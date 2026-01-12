@@ -4,7 +4,6 @@
   - **Description**: Add full history of actions to allow stepping backward and forward, plus video-like playback of the entire drawing process with speed control and timeline scrubber.
   - **Implementation**:
     - Implement a stack-based history system in `js/history.js`.
-    - Add `undo()` and `redo()` functions.
     - Store all canvas actions (drawings, selections, modifications) in history.
     - Add UI buttons for undo/redo in the toolbar.
     - Limit history size to prevent memory issues (e.g., max 50 states).
