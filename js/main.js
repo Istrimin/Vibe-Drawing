@@ -553,6 +553,7 @@ function handleCanvasMouseDown(e) {
     // Save state BEFORE making changes for proper undo
     saveState();
     floodFill(pos.x, pos.y, state.drawingColor);
+    redrawCanvas();
     return;
   }
 

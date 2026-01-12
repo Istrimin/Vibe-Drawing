@@ -1,8 +1,23 @@
 import { state } from './state.js';
 
 export function floodFill(x, y, color) {
-  alert("The Fill tool is not yet implemented.");
-  console.log(`Flood fill at ${x}, ${y} with color ${color}`);
+  const { gridSize, gridCells } = state;
+
+  // Snap to grid coordinates
+  const gridX = Math.floor(x / gridSize) * gridSize;
+  const gridY = Math.floor(y / gridSize) * gridSize;
+
+  // Check if there's a grid cell at this position
+  const existingCell = gridCells.find(cell => cell.x === gridX && cell.y === gridY);
+
+  if (existingCell !== undefined) {
+    // Grid mode fill
+    gridFloodFill(x, y, color);
+  } else {
+    // Simple mode fill - not implemented yet
+    alert("The Fill tool for free drawing is not yet implemented.");
+    console.log(`Flood fill at ${x}, ${y} with color ${color}`);
+  }
 }
 
 export function gridFloodFill(startX, startY, fillColor) {
