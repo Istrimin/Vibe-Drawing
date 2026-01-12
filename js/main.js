@@ -550,12 +550,19 @@ function handleCanvasMouseDown(e) {
   }
 
   if (state.selectionTool === 'fill') {
-    // Save state BEFORE making changes for proper undo
-    saveState();
-    floodFill(pos.x, pos.y, state.drawingColor);
-    redrawCanvas();
-    return;
-  }
+      // Save state BEFORE making changes for proper undo
+      saveState();
+      // Check if it's a right-click (button 2) to erase
+      if (e.button === 2) {
+        // Right-click to erase (make transparent) the clicked area
+        floodErase(pos.x, pos.y);
+      } else {
+        // Left-click to fill with the selected color
+        floodFill(pos.x, pos.y, state.drawingColor);
+      }
+      redrawCanvas();
+      return;
+    }
 
   if (state.selectionTool === 'pencil' || state.selectionTool === 'eraser') {
     // Save state BEFORE making changes for proper undo
