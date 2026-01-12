@@ -26,7 +26,7 @@ html, body {
 .canvas-container {
     position: absolute;
     top: 40px; /* Make space for top toolbar */
-    bottom: 24px; /* Height of status bar */
+    bottom: 54px; /* Height of status bar (24px) + timeline controls (30px) */
     left: 42px;  /* Width of left toolbar */
     right: 60px; /* Width of right toolbar */
     overflow: hidden;
@@ -358,24 +358,33 @@ input#gridColorPicker { width: 30px; height: 30px; }
 
 /* --- MISC --- */
 #statusBar {
-    position: absolute; bottom: 0; left: 0; right: 0;
+    position: absolute; bottom: 30px; left: 0; right: 0;
     background: #1e1e1e; border-top: 1px solid #333;
-    height: 24px; font-size: 11px; color: #999; z-index: 1001;
+    height: 24px; font-size: 11px; color: #999; z-index: 1000;
     display: flex; align-items: center; justify-content: space-between;
     padding: 0 10px;
 }
 
-.playback-status {
+/* --- TIMELINE CONTROLS --- */
+.timeline-controls {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: #1e1e1e;
+    border-top: 1px solid #333;
+    height: 30px;
     display: flex;
     align-items: center;
+    justify-content: center;
     gap: 8px;
-    margin-left: auto;
-    margin-right: 10px;
+    z-index: 1001;
+    padding: 0 10px;
 }
 
-.playback-btn-small {
-    width: 20px;
-    height: 20px;
+.timeline-btn {
+    width: 22px;
+    height: 22px;
     border: none;
     background: #333;
     color: #ccc;
@@ -384,27 +393,24 @@ input#gridColorPicker { width: 30px; height: 30px; }
     display: flex;
     align-items: center;
     justify-content: center;
+    font-size: 10px;
     transition: all 0.2s ease;
 }
 
-.playback-btn-small:hover {
+.timeline-btn:hover {
     background: #444;
     color: white;
 }
 
-.playback-btn-small:active {
-    background: #555;
+.timeline-btn.playing {
+    background: #7b61ff;
+    color: white;
 }
 
-.timeline-container-small {
-    width: 120px;
-    margin: 0 8px;
-}
-
-.timeline-container-small input[type="range"] {
+.timeline-slider {
     -webkit-appearance: none;
     appearance: none;
-    width: 100%;
+    width: 150px;
     height: 4px;
     background: #444;
     outline: none;
@@ -412,7 +418,7 @@ input#gridColorPicker { width: 30px; height: 30px; }
     cursor: pointer;
 }
 
-.timeline-container-small input[type="range"]::-webkit-slider-thumb {
+.timeline-slider::-webkit-slider-thumb {
     -webkit-appearance: none;
     appearance: none;
     width: 12px;
@@ -422,7 +428,7 @@ input#gridColorPicker { width: 30px; height: 30px; }
     cursor: pointer;
 }
 
-.timeline-container-small input[type="range"]::-moz-range-thumb {
+.timeline-slider::-moz-range-thumb {
     width: 12px;
     height: 12px;
     background: #7b61ff;
@@ -431,46 +437,10 @@ input#gridColorPicker { width: 30px; height: 30px; }
     border: none;
 }
 
-.speed-control {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-}
-
-.speed-control input[type="range"] {
-    -webkit-appearance: none;
-    appearance: none;
-    width: 60px;
-    height: 3px;
-    background: #444;
-    outline: none;
-    border-radius: 2px;
-    cursor: pointer;
-}
-
-.speed-control input[type="range"]::-webkit-slider-thumb {
-    -webkit-appearance: none;
-    appearance: none;
-    width: 10px;
-    height: 10px;
-    background: #7b61ff;
-    border-radius: 50%;
-    cursor: pointer;
-}
-
-.speed-control input[type="range"]::-moz-range-thumb {
-    width: 10px;
-    height: 10px;
-    background: #7b61ff;
-    border-radius: 50%;
-    cursor: pointer;
-    border: none;
-}
-
-#speedValue {
-    font-size: 10px;
-    color: #eee;
-    min-width: 25px;
+#timelineFrame {
+    font-size: 11px;
+    color: #aaa;
+    min-width: 40px;
     text-align: center;
 }
 ::-webkit-scrollbar { width: 4px; height: 4px; }

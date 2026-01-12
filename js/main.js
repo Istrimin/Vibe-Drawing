@@ -5,6 +5,7 @@ import { updateActiveTool, updateStatusBar, toggleGrid, showDevTools } from './u
 import { floodFill } from './fill.js';
 import { initCursors, setupCursorKeyboardShortcuts, setPipetteCursor, setPencilCursor, setEraserCursor, resetCursor } from './cursors.js';
 import { getPathBoundingBox, doRectanglesIntersect, getCellsBetweenPoints } from './geometry.js';
+import { undo, redo, saveState, startPlayback, stopPlayback, pausePlayback, resumePlayback, setPlaybackSpeed, scrubToFrame, getPlaybackState, getHistoryLength } from './history.js';
 
 // --- Functions that were in script.js ---
 
@@ -19,35 +20,8 @@ function init() {
   updateStatusBar('Ready');
 }
 
-// Setup UI
-function setupUI() {
-  updateActiveTool(document.querySelector('.tool-btn.active'));
-
-
-  
-  // Set initial cursor based on default tool
-  if (state.selectionTool === 'pencil') {
-    setPencilCursor();
-  } else if (state.selectionTool === 'eraser') {
-    setEraserCursor();
-  } else if (state.selectionTool === 'pipette') {
-    setPipetteCursor();
-  } else if (state.selectionTool === 'grid-draw') {
-    elements.canvas.style.cursor = 'crosshair';
-  }
-  
-  // Disable context menu on color pickers
-  elements.brushColorPicker.oncontextmenu = () => false;
-  elements.gridColorPicker.oncontextmenu = () => false;
-  elements.backgroundColorPicker.oncontextmenu = () => false;
-}
-
-
-// EVENT HANDLERS
+// Setup event listeners
 function setupEventListeners() {
-  // Global variable for last selected swatch color - declare FIRST
-  let lastSwatchColor = '#ffffff';
-
   // Canvas events
   elements.canvas.addEventListener('mousedown', handleCanvasMouseDown);
   elements.canvas.addEventListener('mousemove', handleCanvasMouseMove);
@@ -71,7 +45,7 @@ function setupEventListeners() {
   elements.zoomOutBtn.addEventListener('click', () => zoom(0.8));
   elements.zoomResetBtn.addEventListener('click', () => zoom(1));
   elements.clearCanvasBtn.addEventListener('click', clearCanvas);
-  elements.saveBtn.addEventListener('click', saveState);
+  elements.saveBtn.addEventListener('click', saveProjectState);
   elements.loadBtn.addEventListener('click', loadState);
 
   // Grid
@@ -95,6 +69,9 @@ function setupEventListeners() {
     state.gridSize = parseInt(e.target.value, 10);
     redrawCanvas();
   });
+  
+  // Make redrawCanvas available globally for history functions
+  window.redrawCanvas = redrawCanvas;
   elements.backgroundColorPicker.addEventListener('input', (e) => {
     state.backgroundColor = e.target.value;
     redrawCanvas();
@@ -130,26 +107,19 @@ function setupEventListeners() {
     if (e.target.classList.contains('color-swatch')) {
       const color = e.target.dataset.color;
       state.drawingColor = color;
-      lastSwatchColor = color; // Store for right-click assignment
-      
       // Update UI
       elements.colorPalette.querySelectorAll('.color-swatch').forEach(btn => btn.classList.remove('active'));
       e.target.classList.add('active');
-      
-      // Sync with input for other code that might use it (optional, but good for compatibility)
-      // elements.brushColorPicker.value = color;
+
       updateStatusBar(`Color: ${color}`);
     }
   });
 
   // Right-click on color swatch opens browser color picker
-  let currentSwatchElement = null;
   elements.colorPalette.addEventListener('contextmenu', (e) => {
     if (e.target.classList.contains('color-swatch')) {
       e.preventDefault();
-      currentSwatchElement = e.target;
-      const color = e.target.dataset.color;
-      elements.swatchColorPicker.value = color;
+      elements.swatchColorPicker.value = e.target.dataset.color;
       elements.swatchColorPicker.click(); // Opens native color picker
     }
   });
@@ -158,19 +128,8 @@ function setupEventListeners() {
   elements.swatchColorPicker.addEventListener('input', (e) => {
     const color = e.target.value;
     state.drawingColor = color;
-    lastSwatchColor = color;
     elements.brushColorPicker.value = color;
-    
-    // Update the swatch that triggered the picker
-    if (currentSwatchElement) {
-      currentSwatchElement.dataset.color = color;
-      currentSwatchElement.style.backgroundColor = color;
-      currentSwatchElement.classList.add('active');
-      elements.colorPalette.querySelectorAll('.color-swatch').forEach(btn => {
-        if (btn !== currentSwatchElement) btn.classList.remove('active');
-      });
-    }
-    
+
     updateStatusBar(`Color: ${color}`);
   });
 
@@ -198,13 +157,11 @@ function setupEventListeners() {
     elements.app.classList.toggle('right-toolbar-hidden', !e.target.checked);
   });
 
-
-// Symmetry panel logic
-elements.symmetryBtn.addEventListener('click', (e) => {
-  elements.symmetryPanel.classList.toggle('hidden');
-  e.stopPropagation();
-});
-
+  // Symmetry panel logic
+  elements.symmetryBtn.addEventListener('click', (e) => {
+    elements.symmetryPanel.classList.toggle('hidden');
+    e.stopPropagation();
+  });
 
   // Hide symmetry panel on outside click
   document.addEventListener('click', (e) => {
@@ -229,7 +186,7 @@ elements.symmetryBtn.addEventListener('click', (e) => {
 
         // Update main symmetry button active state
         elements.symmetryBtn.classList.toggle('active', state.symmetry.isActive());
-        
+
         // Hide panel after selection
         elements.symmetryPanel.classList.add('hidden');
     });
@@ -278,7 +235,7 @@ elements.symmetryBtn.addEventListener('click', (e) => {
         state.selectionTool = tool;
         updateActiveTool(btn);
       }
-      
+
       // Set cursor based on tool
       if (state.selectionTool === 'pencil') {
         setPencilCursor();
@@ -287,10 +244,9 @@ elements.symmetryBtn.addEventListener('click', (e) => {
       } else if (state.selectionTool === 'pipette') {
         setPipetteCursor();
       } else if (state.selectionTool === 'grid-draw') {
-        // Grid draw tool - use a crosshair cursor
         elements.canvas.style.cursor = 'crosshair';
       }
-      
+
       updateStatusBar(`Tool: ${state.selectionTool}`);
     });
   });
@@ -299,11 +255,185 @@ elements.symmetryBtn.addEventListener('click', (e) => {
   document.addEventListener('keydown', handleKeyDown);
   document.addEventListener('keyup', handleKeyUp);
 
+  // Reset altKeyDown when window regains focus (fixes issue with native color picker)
+  window.addEventListener('focus', () => {
+    if (state.altKeyDown) {
+      state.altKeyDown = false;
+      // Restore cursor based on current tool
+      if (state.selectionTool === 'pencil') {
+        setPencilCursor();
+      } else if (state.selectionTool === 'eraser') {
+        setEraserCursor();
+      } else if (state.selectionTool === 'pipette') {
+        setPipetteCursor();
+      } else if (state.selectionTool === 'grid-draw') {
+        elements.canvas.style.cursor = 'crosshair';
+      } else {
+        resetCursor();
+      }
+      updateStatusBar(`Tool: ${state.selectionTool}`);
+    }
+  });
+
   // Mouse position
   elements.canvas.addEventListener('mousemove', (e) => {
     const pos = getMousePosition(e);
     elements.posStatus.textContent = `X: ${Math.round(pos.x)} Y: ${Math.round(pos.y)}`;
   });
+}
+
+// Setup UI
+function setupUI() {
+  updateActiveTool(document.querySelector('.tool-btn.active'));
+
+
+
+  // Set initial cursor based on default tool
+  if (state.selectionTool === 'pencil') {
+    setPencilCursor();
+  } else if (state.selectionTool === 'eraser') {
+    setEraserCursor();
+  } else if (state.selectionTool === 'pipette') {
+    setPipetteCursor();
+  } else if (state.selectionTool === 'grid-draw') {
+    elements.canvas.style.cursor = 'crosshair';
+  }
+
+  // Disable context menu on color pickers
+  elements.brushColorPicker.oncontextmenu = () => false;
+  elements.gridColorPicker.oncontextmenu = () => false;
+  elements.backgroundColorPicker.oncontextmenu = () => false;
+
+  // Setup timeline controls
+  setupTimelineControls();
+}
+
+// --- TIMELINE FUNCTIONS ---
+function setupTimelineControls() {
+  // Delay initialization to ensure DOM is ready
+  setTimeout(() => {
+    // Re-query timeline elements in case they weren't ready during initial load
+    const timelineControls = document.getElementById('timelineControls');
+    const timelinePlayBtn = document.getElementById('timelinePlayBtn');
+    const timelineSpeedBtn = document.getElementById('timelineSpeedBtn');
+    const timelineSlider = document.getElementById('timelineSlider');
+    const timelineFrame = document.getElementById('timelineFrame');
+    
+    if (!timelineControls) return;
+
+    // Show timeline controls always
+    timelineControls.style.display = 'flex';
+    updateTimelineUI();
+
+    // Play/Pause button
+    timelinePlayBtn?.addEventListener('click', togglePlayback);
+
+    // Speed button - cycle through speeds
+    timelineSpeedBtn?.addEventListener('click', cyclePlaybackSpeed);
+
+    // Slider - seek to frame
+    timelineSlider?.addEventListener('input', (e) => {
+      const frame = parseInt(e.target.value, 10);
+      // Adjust frame index to match our history index (starts from 0)
+      state.currentHistoryIndex = frame - 1;
+      // Update the state to the selected frame
+      if (frame === 0) {
+        // Reset to empty state
+        state.images = [];
+        state.drawingPaths = [];
+        state.gridCells = [];
+        state.selectedImage = null;
+        state.selectedObjects = [];
+        state.zoomLevel = 1;
+        state.panOffset = { x: 0, y: 0 };
+      } else if (frame <= state.undoStack.length) {
+        const frameState = state.undoStack[frame - 1];
+        if (frameState) {
+          state.images = JSON.parse(JSON.stringify(frameState.images));
+          state.drawingPaths = JSON.parse(JSON.stringify(frameState.drawingPaths));
+          state.gridCells = JSON.parse(JSON.stringify(frameState.gridCells));
+          state.selectedImage = frameState.selectedImage;
+          state.selectedObjects = JSON.parse(JSON.stringify(frameState.selectedObjects));
+          state.zoomLevel = frameState.zoomLevel;
+          state.panOffset = { ...frameState.panOffset };
+        }
+      }
+      
+      if (window.redrawCanvas) {
+        window.redrawCanvas();
+      }
+      updateTimelineUI();
+    });
+
+    // Slider - stop playback when user starts dragging
+    timelineSlider?.addEventListener('mousedown', () => {
+      const playbackState = getPlaybackState();
+      if (playbackState.isPlaying) {
+        stopPlayback();
+      }
+    });
+  }, 0);
+}
+
+function updateTimelineUI() {
+  // Re-query elements in case they changed
+  const timelineSlider = document.getElementById('timelineSlider');
+  const timelineFrame = document.getElementById('timelineFrame');
+  const timelinePlayBtn = document.getElementById('timelinePlayBtn');
+
+  const playbackState = getPlaybackState();
+  const totalFrames = getHistoryLength();
+  const currentFrame = state.currentHistoryIndex + 1; // Since index starts at -1
+
+  // Update slider
+  if (timelineSlider) {
+    timelineSlider.max = Math.max(0, totalFrames);
+    timelineSlider.value = currentFrame;
+  }
+
+  // Update frame counter
+  if (timelineFrame) {
+    timelineFrame.textContent = `${currentFrame}/${totalFrames}`;
+  }
+
+  // Update play button state
+  if (timelinePlayBtn) {
+    timelinePlayBtn.textContent = playbackState.isPlaying ? '⏸' : '▶';
+    timelinePlayBtn.classList.toggle('playing', playbackState.isPlaying);
+  }
+
+  // Update speed button - find it separately
+  const timelineSpeedBtn = document.getElementById('timelineSpeedBtn');
+  if (timelineSpeedBtn) {
+    timelineSpeedBtn.textContent = playbackState.speed + 'x';
+  }
+}
+
+function togglePlayback() {
+  const playbackState = getPlaybackState();
+  if (playbackState.isPlaying) {
+    stopPlayback();
+  } else {
+    startPlayback(updateTimelineUI);
+  }
+  
+  // Update button state
+  const timelinePlayBtn = document.getElementById('timelinePlayBtn');
+  if (timelinePlayBtn) {
+    timelinePlayBtn.textContent = getPlaybackState().isPlaying ? '⏸' : '▶';
+    timelinePlayBtn.classList.toggle('playing', getPlaybackState().isPlaying);
+  }
+}
+
+function cyclePlaybackSpeed() {
+  const speeds = [0.25, 0.5, 1, 2, 4];
+  const currentState = getPlaybackState();
+  const currentIndex = speeds.indexOf(currentState.speed);
+  const nextIndex = (currentIndex + 1) % speeds.length;
+  const newSpeed = speeds[nextIndex];
+
+  setPlaybackSpeed(newSpeed);
+  updateTimelineUI();
 }
 
 function handleCanvasMouseDown(e) {
@@ -316,7 +446,7 @@ function handleCanvasMouseDown(e) {
         if (obj.type === 'image') bbox = { minX: obj.obj.x, minY: obj.obj.y, maxX: obj.obj.x + obj.obj.width, maxY: obj.obj.y + obj.obj.height };
         else if (obj.type === 'path') bbox = getPathBoundingBox(obj.obj);
         else if (obj.type === 'grid-cell') bbox = { minX: obj.obj.x, minY: obj.obj.y, maxX: obj.obj.x + state.gridSize, maxY: obj.obj.y + state.gridSize };
-        
+
         return bbox && pos.x >= bbox.minX && pos.x <= bbox.maxX && pos.y >= bbox.minY && pos.y <= bbox.maxY;
     });
 
@@ -327,7 +457,7 @@ function handleCanvasMouseDown(e) {
         state.isGhostVisible = true;
         elements.canvas.style.cursor = 'move';
         // Save state BEFORE moving for proper undo
-        saveStateToUndoStack();
+        saveState();
         return;
     }
   }
@@ -345,12 +475,12 @@ function handleCanvasMouseDown(e) {
     elements.canvas.style.cursor = 'grabbing';
     return;
   }
-  
+
   // Grid Draw Tool Handling (Left-click to draw, Right-click to erase)
   if (state.selectionTool === 'grid-draw') {
     state.isDrawing = true; // Start drawing state for grid
     // Save state BEFORE making changes for proper undo
-    saveStateToUndoStack();
+    saveState();
     const gridSize = state.gridSize;
 
     state.lastGridCell = { x: Math.floor(pos.x / gridSize) * gridSize, y: Math.floor(pos.y / gridSize) * gridSize };
@@ -381,7 +511,7 @@ function handleCanvasMouseDown(e) {
     state.isDrawing = true;
     state.isRightClickErasing = true;
     // Save state BEFORE making changes for proper undo
-    saveStateToUndoStack();
+    saveState();
     state.currentPath = [{
         x: pos.x, y: pos.y,
         size: state.eraserSize,
@@ -390,7 +520,7 @@ function handleCanvasMouseDown(e) {
     redrawCanvas();
     return;
   }
-  
+
   if (e.button !== 0) return; // All other actions are for left-click only
 
   if (state.selectionTool === 'pipette') {
@@ -399,10 +529,10 @@ function handleCanvasMouseDown(e) {
     // Convert: canvasX = worldX * zoomLevel + panOffset.x
     const canvasX = pos.x * state.zoomLevel + state.panOffset.x;
     const canvasY = pos.y * state.zoomLevel + state.panOffset.y;
-    
+
     const pixelData = elements.canvas.getContext('2d').getImageData(canvasX, canvasY, 1, 1).data;
     const hexColor = "#" + ("000000" + ((pixelData[0] << 16) | (pixelData[1] << 8) | pixelData[2]).toString(16)).slice(-6);
-    
+
     state.drawingColor = hexColor;
     elements.brushColorPicker.value = hexColor;
 
@@ -421,14 +551,14 @@ function handleCanvasMouseDown(e) {
 
   if (state.selectionTool === 'fill') {
     // Save state BEFORE making changes for proper undo
-    saveStateToUndoStack();
+    saveState();
     floodFill(pos.x, pos.y, state.drawingColor);
     return;
   }
 
   if (state.selectionTool === 'pencil' || state.selectionTool === 'eraser') {
     // Save state BEFORE making changes for proper undo
-    saveStateToUndoStack();
+    saveState();
     state.isDrawing = true;
     state.currentPath = [{
       x: pos.x,
@@ -448,17 +578,17 @@ function handleCanvasMouseDown(e) {
       state.isResizing = true;
       state.resizeStart = { x: pos.x, y: pos.y, width: clickedImage.width, height: clickedImage.height };
       // Save state BEFORE resizing for proper undo
-      saveStateToUndoStack();
+      saveState();
     } else if (isOnRotationHandle(pos, clickedImage)) {
       state.isRotating = true;
       state.rotateStart = { angle: clickedImage.rotation, x: pos.x, y: pos.y };
       // Save state BEFORE rotating for proper undo
-      saveStateToUndoStack();
+      saveState();
     } else {
       state.isDragging = true;
       state.dragStart = { x: pos.x - clickedImage.x, y: pos.y - clickedImage.y };
       // Save state BEFORE moving for proper undo
-      saveStateToUndoStack();
+      saveState();
     }
   } else {
     // Start a new selection
@@ -531,7 +661,7 @@ function handleCanvasMouseMove(e) {
     // Apply grid snapping if in grid-draw mode or if grid snapping is enabled
     let snappedDx = dx;
     let snappedDy = dy;
-    
+
     if (state.selectionTool === 'grid-draw' || state.showGrid) {
       // Snap to grid by rounding to nearest grid size
       snappedDx = Math.round(dx / state.gridSize) * state.gridSize;
@@ -588,13 +718,13 @@ function handleCanvasMouseUp(e) {
   if (e.button === 2 && state.isRightClickErasing) {
     state.isRightClickErasing = false;
   }
-  
+
   // Reset lastGridMousePos to prevent continuation on next draw
   state.lastGridMousePos = null;
 
   if (state.isMovingSelection) {
     state.isMovingSelection = false;
-    
+
     // Apply the ghost offset to actual objects
     if (state.ghostOffset && (state.ghostOffset.x !== 0 || state.ghostOffset.y !== 0)) {
       state.selectedObjects.forEach(selected => {
@@ -609,11 +739,11 @@ function handleCanvasMouseUp(e) {
         }
       });
     }
-    
+
     // Hide ghost
     state.isGhostVisible = false;
     state.ghostOffset = { x: 0, y: 0 };
-    
+
     // Redraw canvas to show objects in new positions
     redrawCanvas();
   }
@@ -672,7 +802,7 @@ function handleCanvasMouseUp(e) {
             }
         });
     }
-    
+
     state.selectionPath = [];
     state.isSelecting = false;
     redrawCanvas();
@@ -702,7 +832,7 @@ function pickColorFromCanvas(e) {
     // Convert screen coordinates to canvas coordinates
     const screenX = e.clientX - rect.left;
     const screenY = e.clientY - rect.top;
-    
+
     // Convert to world coordinates using getMousePosition logic
     const worldX = (screenX - state.panOffset.x) / state.zoomLevel;
     const worldY = (screenY - state.panOffset.y) / state.zoomLevel;
@@ -710,7 +840,7 @@ function pickColorFromCanvas(e) {
     // Convert back to canvas coordinates for getImageData
     const canvasX = worldX * state.zoomLevel + state.panOffset.x;
     const canvasY = worldY * state.zoomLevel + state.panOffset.y;
-    
+
     const pixelData = elements.canvas.getContext('2d').getImageData(canvasX, canvasY, 1, 1).data;
     const hexColor = "#" + ("000000" + ((pixelData[0] << 16) | (pixelData[1] << 8) | pixelData[2]).toString(16)).slice(-6);
     return hexColor;
@@ -728,7 +858,7 @@ function handleKeyDown(e) {
       elements.canvas.style.cursor = 'grab';
     }
   }
-  
+
   // Alt key - temporarily activate pipette tool with pipette cursor
   if (e.key === 'Alt' && !state.altKeyDown) {
     e.preventDefault();
@@ -742,20 +872,20 @@ function handleKeyDown(e) {
     setPipetteCursor();
     updateStatusBar('Tool: Color Picker (Alt)');
   }
-  
+
   if (e.key === 'Delete' && state.selectedImage) {
     state.images = state.images.filter(img => img !== state.selectedImage);
     state.selectedImage = null;
-    saveStateToUndoStack();
+    saveState();
     redrawCanvas();
     updateStatusBar('Image deleted');
   }
-  
+
   // Delete selected objects (rect-select/lasso selections)
   if (e.key === 'Delete' && state.selectedObjects.length > 0) {
     // Save state BEFORE making changes for proper undo
-    saveStateToUndoStack();
-    
+    saveState();
+
     // Remove all selected objects
     state.selectedObjects.forEach(selected => {
       if (selected.type === 'image') {
@@ -766,39 +896,43 @@ function handleKeyDown(e) {
         state.gridCells = state.gridCells.filter(cell => cell !== selected.obj);
       }
     });
-    
+
     state.selectedObjects = [];
     redrawCanvas();
     updateStatusBar('Selected objects deleted');
   }
 
-  // Undo with Ctrl+Z (with Ctrl)
-  if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
-    e.preventDefault();
-    undo();
-    return;
-  }
-  
-  // Redo with Ctrl+Y (with Ctrl)
-  if ((e.ctrlKey || e.metaKey) && e.key === 'y') {
-    e.preventDefault();
-    redo();
-    return;
-  }
-  
-  // Undo with Z key (without Ctrl)
-  if (e.code === 'KeyZ' && !e.ctrlKey && !e.metaKey) {
-    e.preventDefault();
-    undo();
-    return;
-  }
-  
-  // Redo with X key (without Ctrl)
-  if (e.code === 'KeyX' && !e.ctrlKey && !e.metaKey) {
-    e.preventDefault();
-    redo();
-    return;
-  }
+   // Undo with Ctrl+Z (with Ctrl)
+   if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
+     e.preventDefault();
+     undo();
+     updateTimelineUI();
+     return;
+   }
+ 
+   // Redo with Ctrl+Y (with Ctrl)
+   if ((e.ctrlKey || e.metaKey) && e.key === 'y') {
+     e.preventDefault();
+     redo();
+     updateTimelineUI();
+     return;
+   }
+ 
+   // Undo with Z key (without Ctrl)
+   if (e.code === 'KeyZ' && !e.ctrlKey && !e.metaKey) {
+     e.preventDefault();
+     undo();
+     updateTimelineUI();
+     return;
+   }
+ 
+   // Redo with X key (without Ctrl)
+   if (e.code === 'KeyX' && !e.ctrlKey && !e.metaKey) {
+     e.preventDefault();
+     redo();
+     updateTimelineUI();
+     return;
+   }
 }
 
 function handleKeyUp(e) {
@@ -808,7 +942,7 @@ function handleKeyUp(e) {
     state.isPanning = false;
     elements.canvas.style.cursor = 'default';
   }
-  
+
   // Alt key release - restore previous tool and cursor
   if (e.key === 'Alt') {
     e.preventDefault();
@@ -848,7 +982,7 @@ function uploadImages(files) {
             rotation: 0
           };
           state.images.push(imageData);
-          saveStateToUndoStack();
+          saveState();
           redrawCanvas();
           updateStatusBar(`Uploaded: ${file.name}`);
         };
@@ -911,170 +1045,15 @@ function getMousePosition(e) {
     y: (e.clientY - rect.top - state.panOffset.y) / state.zoomLevel
   };
 }
-// HISTORY
-function saveStateToUndoStack() {
-  // When symmetry is active, save the expanded grid cells for consistent undo/redo
-  let gridCellsToSave = state.gridCells;
-  if (state.symmetry.isActive()) {
-    gridCellsToSave = state.symmetry.transformGridCells(state.gridCells, state.gridSize);
-  }
-  
-  const stateCopy = JSON.parse(JSON.stringify({
-    images: state.images,
-    drawingPaths: state.drawingPaths,
-    gridCells: gridCellsToSave,
-    symmetry: {
-      mode: state.symmetry.mode,
-      radialRays: state.symmetry.radialRays
-    },
-    gridType: 'square',
-    gridTransformationMode: state.gridTransformationMode
-  }));
-  state.undoStack.push(stateCopy);
-  state.redoStack = [];
-  if (state.undoStack.length > 50) {
-    state.undoStack.shift();
-  }
-}
-
-
-function undo() {
-  if (state.undoStack.length > 0) {
-    const currentState = {
-      images: state.images,
-      drawingPaths: state.drawingPaths,
-      gridCells: state.gridCells,
-      symmetry: {
-        mode: state.symmetry.mode,
-        radialRays: state.symmetry.radialRays
-      },
-      gridType: state.gridType,
-      gridTransformationMode: state.gridTransformationMode
-    };
-    state.redoStack.push(currentState);
-    const previousState = state.undoStack.pop();
-    state.images = previousState.images;
-    state.drawingPaths = previousState.drawingPaths || [];
-    state.gridCells = previousState.gridCells || [];
-    
-    // Restore symmetry state if it was saved
-    if (previousState.symmetry) {
-      state.symmetry.mode = previousState.symmetry.mode || 'off';
-      state.symmetry.radialRays = previousState.symmetry.radialRays || 8;
-      
-      // Update UI to reflect the restored symmetry state
-      const activeBtn = document.querySelector(`.symmetry-mode-btn[data-mode="${state.symmetry.mode}"]`);
-      if (activeBtn) {
-        document.querySelectorAll('.symmetry-mode-btn').forEach(btn => btn.classList.remove('active'));
-        activeBtn.classList.add('active');
-      }
-      if (state.symmetry.mode === 'radial') {
-        document.getElementById('radial-ray-count').value = state.symmetry.radialRays;
-        document.getElementById('radial-ray-count-container').classList.remove('hidden');
-      } else {
-        document.getElementById('radial-ray-count-container').classList.add('hidden');
-      }
-      document.getElementById('symmetryBtn').classList.toggle('active', state.symmetry.isActive());
-    }
-    
-    // Restore grid type if it was saved
-    if (previousState.gridType) {
-      state.gridType = previousState.gridType;
-    }
-    
-    // Restore grid transformation mode if it was saved
-    if (previousState.gridTransformationMode) {
-      state.gridTransformationMode = previousState.gridTransformationMode;
-      
-      // Update UI to reflect the restored grid transformation mode
-      if (elements.gridTransformBtn) {
-        elements.gridTransformBtn.setAttribute('data-mode', state.gridTransformationMode);
-        
-        if (state.gridTransformationMode === 'visual-only') {
-          elements.gridTransformBtn.title = 'Grid Transformation: Visual Only (Grid type changes only affect view)';
-        } else {
-          elements.gridTransformBtn.title = 'Grid Transformation: Permanent (Grid type changes affect saved data)';
-        }
-      }
-    }
-    
-    redrawCanvas();
-    updateStatusBar('Undo');
-  }
-}
-function redo() {
-  if (state.redoStack.length > 0) {
-    const currentState = {
-      images: state.images,
-      drawingPaths: state.drawingPaths,
-      gridCells: state.gridCells,
-      symmetry: {
-        mode: state.symmetry.mode,
-        radialRays: state.symmetry.radialRays
-      },
-      gridType: state.gridType,
-      gridTransformationMode: state.gridTransformationMode
-    };
-    state.undoStack.push(currentState);
-    const nextState = state.redoStack.pop();
-    state.images = nextState.images;
-    state.drawingPaths = nextState.drawingPaths || [];
-    state.gridCells = nextState.gridCells || [];
-    
-    // Restore symmetry state if it was saved
-    if (nextState.symmetry) {
-      state.symmetry.mode = nextState.symmetry.mode || 'off';
-      state.symmetry.radialRays = nextState.symmetry.radialRays || 8;
-      
-      // Update UI to reflect the restored symmetry state
-      const activeBtn = document.querySelector(`.symmetry-mode-btn[data-mode="${state.symmetry.mode}"]`);
-      if (activeBtn) {
-        document.querySelectorAll('.symmetry-mode-btn').forEach(btn => btn.classList.remove('active'));
-        activeBtn.classList.add('active');
-      }
-      if (state.symmetry.mode === 'radial') {
-        document.getElementById('radial-ray-count').value = state.symmetry.radialRays;
-        document.getElementById('radial-ray-count-container').classList.remove('hidden');
-      } else {
-        document.getElementById('radial-ray-count-container').classList.add('hidden');
-      }
-      document.getElementById('symmetryBtn').classList.toggle('active', state.symmetry.isActive());
-    }
-    
-    // Restore grid type if it was saved
-    if (nextState.gridType) {
-      state.gridType = nextState.gridType;
-    }
-    
-    // Restore grid transformation mode if it was saved
-    if (nextState.gridTransformationMode) {
-      state.gridTransformationMode = nextState.gridTransformationMode;
-      
-      // Update UI to reflect the restored grid transformation mode
-      if (elements.gridTransformBtn) {
-        elements.gridTransformBtn.setAttribute('data-mode', state.gridTransformationMode);
-        
-        if (state.gridTransformationMode === 'visual-only') {
-          elements.gridTransformBtn.title = 'Grid Transformation: Visual Only (Grid type changes only affect view)';
-        } else {
-          elements.gridTransformBtn.title = 'Grid Transformation: Permanent (Grid type changes affect saved data)';
-        }
-      }
-    }
-    
-    redrawCanvas();
-    updateStatusBar('Redo');
-  }
-}
 
 // --- Persistence ---
-function saveState() {
+function saveProjectState() {
   // When symmetry is active, save the expanded grid cells to make them permanent
   let gridCellsToSave = state.gridCells;
   if (state.symmetry.isActive()) {
     gridCellsToSave = state.symmetry.transformGridCells(state.gridCells, state.gridSize);
   }
-  
+
   const stateToSave = {
     images: state.images,
     drawingPaths: state.drawingPaths,
@@ -1099,12 +1078,12 @@ function loadState() {
     state.images = parsedState.images || [];
     state.drawingPaths = parsedState.drawingPaths || [];
     state.gridCells = parsedState.gridCells || [];
-    
+
     // Restore symmetry state if it was saved
     if (parsedState.symmetry) {
       state.symmetry.mode = parsedState.symmetry.mode || 'off';
       state.symmetry.radialRays = parsedState.symmetry.radialRays || 8;
-      
+
       // Update UI to reflect the loaded symmetry state
       const activeBtn = document.querySelector(`.symmetry-mode-btn[data-mode="${state.symmetry.mode}"]`);
       if (activeBtn) {
@@ -1119,20 +1098,20 @@ function loadState() {
       }
       document.getElementById('symmetryBtn').classList.toggle('active', state.symmetry.isActive());
     }
-    
+
     // Restore grid type if it was saved
     if (parsedState.gridType) {
       state.gridType = parsedState.gridType;
     }
-    
+
     // Restore grid transformation mode if it was saved
     if (parsedState.gridTransformationMode) {
       state.gridTransformationMode = parsedState.gridTransformationMode;
-      
+
       // Update UI to reflect the loaded grid transformation mode
       if (elements.gridTransformBtn) {
         elements.gridTransformBtn.setAttribute('data-mode', state.gridTransformationMode);
-        
+
         if (state.gridTransformationMode === 'visual-only') {
           elements.gridTransformBtn.title = 'Grid Transformation: Visual Only (Grid type changes only affect view)';
         } else {
@@ -1140,13 +1119,11 @@ function loadState() {
         }
       }
     }
-    
+
     redrawCanvas();
     updateStatusBar('State loaded');
   }
 }
-
-
 
 function exportAsImage() {
     const tempCanvas = document.createElement('canvas');
@@ -1190,7 +1167,6 @@ function exportAsImage() {
     link.click();
     updateStatusBar('Exported as image');
 }
-
 
 // --- App Initialization ---
 document.addEventListener('DOMContentLoaded', init);

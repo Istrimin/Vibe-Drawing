@@ -164,6 +164,14 @@
             <span id="toolStatus">Tool: Select</span>
             <span id="posStatus">X: 0 Y: 0</span>
         </div>
+        
+        <!-- Timeline Playback Controls - separate from status bar -->
+        <div class="timeline-controls" id="timelineControls">
+            <button class="timeline-btn" id="timelinePlayBtn" title="Play/Pause">▶</button>
+            <input type="range" id="timelineSlider" min="0" max="0" value="0" class="timeline-slider">
+            <span id="timelineFrame">0/0</span>
+            <button class="timeline-btn" id="timelineSpeedBtn" title="Speed: 1x">1x</button>
+        </div>
     </div>
     <script type="module" src="js/main.js" defer></script>
 </body>

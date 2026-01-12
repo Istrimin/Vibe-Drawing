@@ -19,6 +19,7 @@ export const state = {
   panStart: { x: 0, y: 0 },
   undoStack: [],
   redoStack: [],
+  currentHistoryIndex: -1,
   isDrawing: false,
   drawingPaths: [],
   currentPath: [],
@@ -46,7 +47,12 @@ export const state = {
   gridTransformationMode: 'permanent', // 'permanent' or 'visual-only'
   showSymmetryLine: true,
   isCopying: false,
-  gridBrushSize: 1
+  gridBrushSize: 1,
+  // Timeline / Playback
+  isPlaying: false,
+  playbackSpeed: 1, // 0.25, 0.5, 1, 2, 4
+  playbackInterval: null,
+  currentTimelineFrame: 0
 };
 
 // DOM Elements
@@ -91,5 +97,11 @@ export const elements = {
 
   symmetryModeBtns: document.querySelectorAll('.symmetry-mode-btn'),
   radialRayCountContainer: document.getElementById('radial-ray-count-container'),
-  radialRayCountInput: document.getElementById('radial-ray-count')
+  radialRayCountInput: document.getElementById('radial-ray-count'),
+  // Timeline elements
+  timelineControls: document.getElementById('timelineControls'),
+  timelinePlayBtn: document.getElementById('timelinePlayBtn'),
+  timelineSlider: document.getElementById('timelineSlider'),
+  timelineFrame: document.getElementById('timelineFrame'),
+  timelineSpeedBtn: document.getElementById('timelineSpeedBtn')
 };
