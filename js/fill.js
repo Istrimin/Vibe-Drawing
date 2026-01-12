@@ -14,8 +14,74 @@ export function floodFill(x, y, color) {
     // Fill connected cells of the same color
     gridFloodFill(x, y, color);
   } else {
-    // Fill enclosed empty area
-    fillEnclosedArea(x, y, color);
+    // When clicking on an empty space, fill ALL empty spaces on the canvas with the new color
+    // This means filling every grid position that doesn't already have a cell
+    fillAllEmptySpaces(color);
+  }
+}
+
+// Fill all empty spaces on the canvas with the given color
+function fillAllEmptySpaces(fillColor) {
+  const { gridSize, gridCells } = state;
+  
+  if (gridCells.length === 0) {
+    // If no cells exist, fill a reasonable area around the origin
+    fillEmptyCanvas(0, 0, fillColor);
+    return;
+  }
+  
+  // Calculate the bounding box of all existing cells
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+  
+  for (const cell of gridCells) {
+    minX = Math.min(minX, cell.x);
+    minY = Math.min(minY, cell.y);
+    maxX = Math.max(maxX, cell.x);
+    maxY = Math.max(maxY, cell.y);
+  }
+  
+  // Define a canvas area to fill - expand the bounding box somewhat
+  const canvasBuffer = 20 * gridSize; // Buffer around existing cells
+  const canvasMinX = minX - canvasBuffer;
+  const canvasMaxX = maxX + canvasBuffer;
+  const canvasMinY = minY - canvasBuffer;
+  const canvasMaxY = maxY + canvasBuffer;
+  
+  // Create a set of existing filled positions for faster lookup
+  const filledSet = new Set();
+  for (const cell of gridCells) {
+    filledSet.add(`${cell.x},${cell.y}`);
+  }
+  
+  // Fill all empty positions within the canvas area
+  for (let x = canvasMinX; x <= canvasMaxX; x += gridSize) {
+    for (let y = canvasMinY; y <= canvasMaxY; y += gridSize) {
+      const key = `${x},${y}`;
+      
+      // Only add if this position doesn't already have a cell
+      if (!filledSet.has(key)) {
+        gridCells.push({ x, y, color: fillColor });
+      }
+    }
+  }
+}
+
+// Fill canvas when no cells exist yet
+function fillEmptyCanvas(centerX, centerY, fillColor) {
+  const { gridSize, gridCells } = state;
+  
+  // Add a moderate number of cells around the click point
+  for (let i = -10; i <= 10; i++) {
+    for (let j = -10; j <= 10; j++) {
+      const x = centerX + i * gridSize;
+      const y = centerY + j * gridSize;
+      
+      // Check if cell already exists to avoid duplicates
+      const existingCell = gridCells.find(cell => cell.x === x && cell.y === y);
+      if (!existingCell) {
+        gridCells.push({ x, y, color: fillColor });
+      }
+    }
   }
 }
 
