@@ -1,25 +1,15 @@
 # TODO List
 
-- [ ] ## 0. Добавить историю действий (Undo/Redo) + Playback
-  - **Description**: Add full history of actions to allow stepping backward and forward, plus video-like playback of the entire drawing process with speed control and timeline scrubber.
+- [ ] ## 0. Добавить Timeline (ползунок в статусбаре)
+  - **Description**: Использовать существующую систему истории (undoStack) как таймлайн. Добавить ползунок в статусбар для перемотки по кадрам истории.
   - **Implementation**:
-    - Implement a stack-based history system in `js/history.js`.
-    - Store all canvas actions (drawings, selections, modifications) in history.
-    - Add UI buttons for undo/redo in the toolbar.
-    - Limit history size to prevent memory issues (e.g., max 50 states).
-    - **Playback Feature**:
-      - Add a "Play Timeline" button in the UI.
-      - Create a playback controls overlay with:
-        - Play/Pause button
-        - Stop button
-        - **Speed slider** (0.25x to 4x speed)
-        - **Timeline scrubber/slider** - drag to jump to any point in the drawing process
-        - Current frame / Total frames display
-      - Use `setInterval` or `requestAnimationFrame` to cycle through all saved history states.
-      - Display each state sequentially like a video playback.
-      - Allow scrubbing through the timeline by dragging the slider.
-      - Visual indicator of playback progress on the timeline.
-  - **Files to edit**: `js/history.js`, `js/main.js`, `js/canvas.js`, `index.html`, `style.css`
+    - Использовать существующие `state.undoStack` и `state.redoStack`
+    - Добавить UI в статусбар: ползунок для выбора кадра + кнопки play/pause
+    - Ползунок показывает общее количество сохранённых состояний
+    - Перетаскивание ползунка восстанавливает выбранное состояние
+    - Play/Pause циклически переключает кадры с регулируемой скоростью
+    - При любом новом действии очистить redoStack и добавить новое состояние
+  - **Files to edit**: `index.html`, `js/main.js`, `style.css`
 
 - [ ] ## 1. Добавить линию симметрии
   - **Description**: Add a visual symmetry line (axis) that can be toggled on/off.
