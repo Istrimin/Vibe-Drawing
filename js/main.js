@@ -1,4 +1,4 @@
-import { state, elements } from './state.js';
+import { state, elements, initializeElements } from './state.js';
 import { setupCanvas, redrawCanvas, zoom, clearCanvas } from './canvas.js';
 import { updateActiveTool, updateStatusBar, toggleGrid, showDevTools } from './ui.js';
 
@@ -11,6 +11,7 @@ import { undo, redo, saveState, startPlayback, stopPlayback, pausePlayback, resu
 
 // Initialize the application
 function init() {
+  initializeElements();
   setupCanvas();
   setupEventListeners();
   initCursors();

@@ -55,53 +55,56 @@ export const state = {
   currentTimelineFrame: 0
 };
 
-// DOM Elements
-export const elements = {
-  canvas: document.getElementById('drawingCanvas'),
-  fileInput: document.getElementById('fileInput'),
-  statusBar: document.getElementById('statusBar'),
-  zoomInBtn: document.getElementById('zoomInBtn'),
-  zoomOutBtn: document.getElementById('zoomOutBtn'),
-  zoomResetBtn: document.getElementById('fitBtn'),
-  toolButtons: document.querySelectorAll('.tool-btn'),
-  clearCanvasBtn: document.getElementById('clearCanvasBtn'),
-  saveBtn: document.getElementById('saveBtn'),
+// DOM Elements - will be initialized after DOM is ready
+export const elements = {};
 
-  loadBtn: document.getElementById('loadBtn'),
-  uploadBtn: document.getElementById('uploadBtn'),
-  zoomLevelDisplay: document.getElementById('zoomLevel'),
-  toolStatus: document.getElementById('toolStatus'),
-  posStatus: document.getElementById('posStatus'),
-  gridColorPicker: document.getElementById('gridColorPicker'),
-  gridSizeInput: document.getElementById('gridSizeInput'),
-  backgroundColorPicker: document.getElementById('backgroundColorPicker'),
-  brushSizeSlider: document.getElementById('brushSizeSlider'),
-  brushSizeValue: document.getElementById('brushSizeValue'),
-  brushColorPicker: document.getElementById('brushColorPicker'),
-  swatchColorPicker: document.getElementById('swatchColorPicker'),
-  eraserSizeSlider: document.getElementById('eraserSizeSlider'),
-  eraserSizeValue: document.getElementById('eraserSizeValue'),
-  gridBrushSizeSlider: document.getElementById('gridBrushSizeSlider'),
-  gridBrushSizeValue: document.getElementById('gridBrushSizeValue'),
-  symmetryBtn: document.getElementById('symmetryBtn'),
-  gridTransformBtn: document.getElementById('gridTransformBtn'),
-  colorPalette: document.getElementById('colorPalette'),
-  app: document.getElementById('app'),
-  togglePanelsBtn: document.getElementById('toggle-panels-btn'),
-  mainMenu: document.getElementById('main-menu'),
-  toggleTopToolbarCb: document.getElementById('toggle-top-toolbar-cb'),
+// Initialize DOM elements after DOM is ready
+export function initializeElements() {
+  elements.canvas = document.getElementById('drawingCanvas');
+  elements.fileInput = document.getElementById('fileInput');
+  elements.statusBar = document.getElementById('statusBar');
+  elements.zoomInBtn = document.getElementById('zoomInBtn');
+  elements.zoomOutBtn = document.getElementById('zoomOutBtn');
+  elements.zoomResetBtn = document.getElementById('fitBtn');
+  elements.toolButtons = document.querySelectorAll('.tool-btn');
+  elements.clearCanvasBtn = document.getElementById('clearCanvasBtn');
+  elements.saveBtn = document.getElementById('saveBtn');
 
-  toggleLeftToolbarCb: document.getElementById('toggle-left-toolbar-cb'),
-  toggleRightToolbarCb: document.getElementById('toggle-right-toolbar-cb'),
-  symmetryPanel: document.getElementById('symmetry-panel'),
+  elements.loadBtn = document.getElementById('loadBtn');
+  elements.uploadBtn = document.getElementById('uploadBtn');
+  elements.zoomLevelDisplay = document.getElementById('zoomLevel');
+  elements.toolStatus = document.getElementById('toolStatus');
+  elements.posStatus = document.getElementById('posStatus');
+  elements.gridColorPicker = document.getElementById('gridColorPicker');
+  elements.gridSizeInput = document.getElementById('gridSizeInput');
+  elements.backgroundColorPicker = document.getElementById('backgroundColorPicker');
+  elements.brushSizeSlider = document.getElementById('brushSizeSlider');
+  elements.brushSizeValue = document.getElementById('brushSizeValue');
+  elements.brushColorPicker = document.getElementById('brushColorPicker');
+  elements.swatchColorPicker = document.getElementById('swatchColorPicker');
+  elements.eraserSizeSlider = document.getElementById('eraserSizeSlider');
+  elements.eraserSizeValue = document.getElementById('eraserSizeValue');
+  elements.gridBrushSizeSlider = document.getElementById('gridBrushSizeSlider');
+  elements.gridBrushSizeValue = document.getElementById('gridBrushSizeValue');
+  elements.symmetryBtn = document.getElementById('symmetryBtn');
+  elements.gridTransformBtn = document.getElementById('gridTransformBtn');
+  elements.colorPalette = document.getElementById('colorPalette');
+  elements.app = document.getElementById('app');
+  elements.togglePanelsBtn = document.getElementById('toggle-panels-btn');
+  elements.mainMenu = document.getElementById('main-menu');
+  elements.toggleTopToolbarCb = document.getElementById('toggle-top-toolbar-cb');
 
-  symmetryModeBtns: document.querySelectorAll('.symmetry-mode-btn'),
-  radialRayCountContainer: document.getElementById('radial-ray-count-container'),
-  radialRayCountInput: document.getElementById('radial-ray-count'),
+  elements.toggleLeftToolbarCb = document.getElementById('toggle-left-toolbar-cb');
+  elements.toggleRightToolbarCb = document.getElementById('toggle-right-toolbar-cb');
+  elements.symmetryPanel = document.getElementById('symmetry-panel');
+
+  elements.symmetryModeBtns = document.querySelectorAll('.symmetry-mode-btn');
+  elements.radialRayCountContainer = document.getElementById('radial-ray-count-container');
+  elements.radialRayCountInput = document.getElementById('radial-ray-count');
   // Timeline elements
-  timelineControls: document.getElementById('timelineControls'),
-  timelinePlayBtn: document.getElementById('timelinePlayBtn'),
-  timelineSlider: document.getElementById('timelineSlider'),
-  timelineFrame: document.getElementById('timelineFrame'),
-  timelineSpeedBtn: document.getElementById('timelineSpeedBtn')
-};
+  elements.timelineControls = document.getElementById('timelineControls');
+  elements.timelinePlayBtn = document.getElementById('timelinePlayBtn');
+  elements.timelineSlider = document.getElementById('timelineSlider');
+  elements.timelineFrame = document.getElementById('timelineFrame');
+  elements.timelineSpeedBtn = document.getElementById('timelineSpeedBtn');
+}
