@@ -554,7 +554,18 @@ function handleCanvasMouseDown(e) {
       state.isRightClickErasing = true; // Flag for continuous erasing
       const cellX = state.lastGridCell.x;
       const cellY = state.lastGridCell.y;
-      state.gridCells = state.gridCells.filter(cell => !(cell.x === cellX && cell.y === cellY));
+      // Remove the cell and its symmetric counterparts if symmetry is active
+      if (state.symmetry.isActive()) {
+        const cellsToRemove = state.symmetry.transformGridCells([{ x: cellX, y: cellY, color: '' }], state.gridSize);
+        // Filter out all cells that match any of the symmetric positions
+        state.gridCells = state.gridCells.filter(cell => {
+          return !cellsToRemove.some(toRemove =>
+            toRemove.x === cell.x && toRemove.y === cell.y
+          );
+        });
+      } else {
+        state.gridCells = state.gridCells.filter(cell => !(cell.x === cellX && cell.y === cellY));
+      }
     }
 
     redrawCanvas();
@@ -704,7 +715,18 @@ function handleCanvasMouseMove(e) {
                         }
                     }
                 } else if (e.buttons === 2) { // Right mouse button (erase)
-                    state.gridCells = state.gridCells.filter(c => !(c.x === cell.x && c.y === cell.y));
+                    // Remove the cell and its symmetric counterparts if symmetry is active
+                    if (state.symmetry.isActive()) {
+                      const cellsToRemove = state.symmetry.transformGridCells([{ x: cell.x, y: cell.y, color: '' }], state.gridSize);
+                      // Filter out all cells that match any of the symmetric positions
+                      state.gridCells = state.gridCells.filter(c => {
+                        return !cellsToRemove.some(toRemove =>
+                          toRemove.x === c.x && toRemove.y === c.y
+                        );
+                      });
+                    } else {
+                      state.gridCells = state.gridCells.filter(c => !(c.x === cell.x && c.y === cell.y));
+                    }
                 }
             }
 
