@@ -92,6 +92,10 @@ function setupEventListeners() {
     state.eraserSize = parseInt(e.target.value, 10);
     elements.eraserSizeValue.textContent = e.target.value;
   });
+  elements.gridBrushSizeSlider.addEventListener('input', (e) => {
+    state.gridBrushSize = parseInt(e.target.value, 10);
+    elements.gridBrushSizeValue.textContent = e.target.value;
+  });
 
   elements.brushColorPicker.addEventListener('input', (e) => {
     state.drawingColor = e.target.value;
@@ -531,40 +535,63 @@ function handleCanvasMouseDown(e) {
     state.lastGridMousePos = { x: pos.x, y: pos.y };
 
     if (e.button === 0) { // Left-click to fill grid cell
-      const cellX = state.lastGridCell.x;
-      const cellY = state.lastGridCell.y;
-      const existingCellIndex = state.gridCells.findIndex(cell => cell.x === cellX && cell.y === cellY);
-      if (existingCellIndex !== -1) {
-          state.gridCells[existingCellIndex].color = state.drawingColor;
-      } else {
-          const newCell = { x: cellX, y: cellY, color: state.drawingColor };
-          state.gridCells.push(newCell);
-          // Add symmetric cells
-          if (state.symmetry.isActive()) {
-            const symmetric = state.symmetry.transformGridCells([newCell], state.gridSize);
-            symmetric.shift(); // remove original
-            symmetric.forEach(s => {
-              if (!state.gridCells.some(c => c.x === s.x && c.y === s.y)) {
-                state.gridCells.push(s);
-              }
-            });
+      // Simple implementation: use grid brush size to determine area
+      const brushSize = state.gridBrushSize;
+      // For simplicity, we'll just draw a square area around the clicked cell
+      // This avoids complex calculations and performance issues
+      const halfSize = Math.floor(brushSize / 2);
+      const centerX = state.lastGridCell.x;
+      const centerY = state.lastGridCell.y;
+      
+      // Draw a square area of size brushSize x brushSize
+      for (let dx = -halfSize; dx <= halfSize; dx++) {
+        for (let dy = -halfSize; dy <= halfSize; dy++) {
+          const cellX = centerX + dx * gridSize;
+          const cellY = centerY + dy * gridSize;
+          const existingCellIndex = state.gridCells.findIndex(cell => cell.x === cellX && cell.y === cellY);
+          if (existingCellIndex !== -1) {
+            state.gridCells[existingCellIndex].color = state.drawingColor;
+          } else {
+            const newCell = { x: cellX, y: cellY, color: state.drawingColor };
+            state.gridCells.push(newCell);
+            // Add symmetric cells
+            if (state.symmetry.isActive()) {
+              const symmetric = state.symmetry.transformGridCells([newCell], state.gridSize);
+              symmetric.shift(); // remove original
+              symmetric.forEach(s => {
+                if (!state.gridCells.some(c => c.x === s.x && c.y === s.y)) {
+                  state.gridCells.push(s);
+                }
+              });
+            }
           }
+        }
       }
     } else if (e.button === 2) { // Right-click to erase grid cell
-      state.isRightClickErasing = true; // Flag for continuous erasing
-      const cellX = state.lastGridCell.x;
-      const cellY = state.lastGridCell.y;
-      // Remove the cell and its symmetric counterparts if symmetry is active
-      if (state.symmetry.isActive()) {
-        const cellsToRemove = state.symmetry.transformGridCells([{ x: cellX, y: cellY, color: '' }], state.gridSize);
-        // Filter out all cells that match any of the symmetric positions
-        state.gridCells = state.gridCells.filter(cell => {
-          return !cellsToRemove.some(toRemove =>
-            toRemove.x === cell.x && toRemove.y === cell.y
-          );
-        });
-      } else {
-        state.gridCells = state.gridCells.filter(cell => !(cell.x === cellX && cell.y === cellY));
+      // Simple implementation for eraser
+      const eraserSize = state.gridBrushSize;
+      const halfSize = Math.floor(eraserSize / 2);
+      const centerX = state.lastGridCell.x;
+      const centerY = state.lastGridCell.y;
+      
+      // Erase a square area of size eraserSize x eraserSize
+      for (let dx = -halfSize; dx <= halfSize; dx++) {
+        for (let dy = -halfSize; dy <= halfSize; dy++) {
+          const cellX = centerX + dx * gridSize;
+          const cellY = centerY + dy * gridSize;
+          // Remove the cell and its symmetric counterparts if symmetry is active
+          if (state.symmetry.isActive()) {
+            const cellsToRemove = state.symmetry.transformGridCells([{ x: cellX, y: cellY, color: '' }], state.gridSize);
+            // Filter out all cells that match any of the symmetric positions
+            state.gridCells = state.gridCells.filter(c => {
+              return !cellsToRemove.some(toRemove =>
+                toRemove.x === c.x && toRemove.y === c.y
+              );
+            });
+          } else {
+            state.gridCells = state.gridCells.filter(c => !(c.x === cellX && c.y === cellY));
+          }
+        }
       }
     }
 
@@ -695,37 +722,64 @@ function handleCanvasMouseMove(e) {
                 gridSize
             );
 
+            // Determine brush size for grid drawing
+            const brushSize = state.gridBrushSize;
+            const brushRadius = Math.max(0, Math.floor((brushSize - 1) / 2)); // Radius in grid cells
+
             for (const cell of cells) {
+                // For grid drawing, we'll apply the brush size to determine the area
                 if (e.buttons === 1) { // Left mouse button (fill)
-                    const existingCellIndex = state.gridCells.findIndex(c => c.x === cell.x && c.y === cell.y);
-                    if (existingCellIndex !== -1) {
-                        state.gridCells[existingCellIndex].color = state.drawingColor;
-                    } else {
-                        const newCell = { x: cell.x, y: cell.y, color: state.drawingColor };
-                        state.gridCells.push(newCell);
-                        // Add symmetric cells
-                        if (state.symmetry.isActive()) {
-                          const symmetric = state.symmetry.transformGridCells([newCell], state.gridSize);
-                          symmetric.shift(); // remove original
-                          symmetric.forEach(s => {
-                            if (!state.gridCells.some(c => c.x === s.x && c.y === s.y)) {
-                              state.gridCells.push(s);
-                            }
-                          });
+                    // Simple implementation: fill a square area around the cell
+                    const brushSize = state.gridBrushSize;
+                    const halfSize = Math.floor(brushSize / 2);
+                    const centerX = cell.x;
+                    const centerY = cell.y;
+                    for (let dx = -halfSize; dx <= halfSize; dx++) {
+                      for (let dy = -halfSize; dy <= halfSize; dy++) {
+                        const filledX = centerX + dx * gridSize;
+                        const filledY = centerY + dy * gridSize;
+                        const existingCellIndex = state.gridCells.findIndex(c => c.x === filledX && c.y === filledY);
+                        if (existingCellIndex !== -1) {
+                          state.gridCells[existingCellIndex].color = state.drawingColor;
+                        } else {
+                          const newCell = { x: filledX, y: filledY, color: state.drawingColor };
+                          state.gridCells.push(newCell);
+                          // Add symmetric cells
+                          if (state.symmetry.isActive()) {
+                            const symmetric = state.symmetry.transformGridCells([newCell], state.gridSize);
+                            symmetric.shift(); // remove original
+                            symmetric.forEach(s => {
+                              if (!state.gridCells.some(c => c.x === s.x && c.y === s.y)) {
+                                state.gridCells.push(s);
+                              }
+                            });
+                          }
                         }
+                      }
                     }
                 } else if (e.buttons === 2) { // Right mouse button (erase)
-                    // Remove the cell and its symmetric counterparts if symmetry is active
-                    if (state.symmetry.isActive()) {
-                      const cellsToRemove = state.symmetry.transformGridCells([{ x: cell.x, y: cell.y, color: '' }], state.gridSize);
-                      // Filter out all cells that match any of the symmetric positions
-                      state.gridCells = state.gridCells.filter(c => {
-                        return !cellsToRemove.some(toRemove =>
-                          toRemove.x === c.x && toRemove.y === c.y
-                        );
-                      });
-                    } else {
-                      state.gridCells = state.gridCells.filter(c => !(c.x === cell.x && c.y === cell.y));
+                    // Simple implementation: erase a square area around the cell
+                    const eraserSize = state.gridBrushSize;
+                    const halfSize = Math.floor(eraserSize / 2);
+                    const centerX = cell.x;
+                    const centerY = cell.y;
+                    for (let dx = -halfSize; dx <= halfSize; dx++) {
+                      for (let dy = -halfSize; dy <= halfSize; dy++) {
+                        const erasedX = centerX + dx * gridSize;
+                        const erasedY = centerY + dy * gridSize;
+                        // Remove the cell and its symmetric counterparts if symmetry is active
+                        if (state.symmetry.isActive()) {
+                          const cellsToRemove = state.symmetry.transformGridCells([{ x: erasedX, y: erasedY, color: '' }], state.gridSize);
+                          // Filter out all cells that match any of the symmetric positions
+                          state.gridCells = state.gridCells.filter(c => {
+                            return !cellsToRemove.some(toRemove =>
+                              toRemove.x === c.x && toRemove.y === c.y
+                            );
+                          });
+                        } else {
+                          state.gridCells = state.gridCells.filter(c => !(c.x === erasedX && c.y === erasedY));
+                        }
+                      }
                     }
                 }
             }
