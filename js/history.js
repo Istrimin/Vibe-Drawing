@@ -19,6 +19,7 @@ export function saveState() {
         selectedObjects: JSON.parse(JSON.stringify(state.selectedObjects)),
         zoomLevel: state.zoomLevel,
         panOffset: { ...state.panOffset },
+        selectionTool: state.selectionTool,
         // Add other state properties that should be saved
     };
     
@@ -50,6 +51,7 @@ export function undo() {
             selectedObjects: JSON.parse(JSON.stringify(state.selectedObjects)),
             zoomLevel: state.zoomLevel,
             panOffset: { ...state.panOffset },
+            selectionTool: state.selectionTool,
         };
         state.redoStack.push(currentState);
         
@@ -75,6 +77,7 @@ export function undo() {
             state.selectedObjects = JSON.parse(JSON.stringify(previousState.selectedObjects));
             state.zoomLevel = previousState.zoomLevel;
             state.panOffset = { ...previousState.panOffset };
+            state.selectionTool = previousState.selectionTool;
         }
         
         // Redraw canvas with new state
@@ -95,6 +98,7 @@ export function redo() {
             selectedObjects: JSON.parse(JSON.stringify(state.selectedObjects)),
             zoomLevel: state.zoomLevel,
             panOffset: { ...state.panOffset },
+            selectionTool: state.selectionTool,
         };
         state.undoStack.push(currentState);
         // We're actually going back in history (from redo stack to undo stack), so increment index
@@ -109,6 +113,7 @@ export function redo() {
         state.selectedObjects = JSON.parse(JSON.stringify(nextState.selectedObjects));
         state.zoomLevel = nextState.zoomLevel;
         state.panOffset = { ...nextState.panOffset };
+        state.selectionTool = nextState.selectionTool;
         
         // Redraw canvas with new state
         if (window.redrawCanvas) {
@@ -143,6 +148,7 @@ export function startPlayback(callback) {
             state.selectedObjects = JSON.parse(JSON.stringify(frameState.selectedObjects));
             state.zoomLevel = frameState.zoomLevel;
             state.panOffset = { ...frameState.panOffset };
+            state.selectionTool = frameState.selectionTool;
 
             // Redraw canvas with new state
             if (window.redrawCanvas) {
@@ -200,6 +206,7 @@ export function resumePlayback() {
             state.selectedObjects = JSON.parse(JSON.stringify(frameState.selectedObjects));
             state.zoomLevel = frameState.zoomLevel;
             state.panOffset = { ...frameState.panOffset };
+            state.selectionTool = frameState.selectionTool;
 
             // Redraw canvas with new state
             if (window.redrawCanvas) {
@@ -241,6 +248,7 @@ export function scrubToFrame(frameIndex) {
         state.selectedObjects = JSON.parse(JSON.stringify(frameState.selectedObjects));
         state.zoomLevel = frameState.zoomLevel;
         state.panOffset = { ...frameState.panOffset };
+        state.selectionTool = frameState.selectionTool;
 
         // Redraw canvas with new state
         if (window.redrawCanvas) {

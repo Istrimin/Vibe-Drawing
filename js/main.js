@@ -309,6 +309,21 @@ function setupUI() {
   setupTimelineControls();
 }
 
+// Update cursor based on current tool
+function updateCursorForTool(tool) {
+  if (tool === 'pencil') {
+    setPencilCursor();
+  } else if (tool === 'eraser') {
+    setEraserCursor();
+  } else if (tool === 'pipette') {
+    setPipetteCursor();
+  } else if (tool === 'grid-draw') {
+    elements.canvas.style.cursor = 'crosshair';
+  } else {
+    resetCursor();
+  }
+}
+
 // --- TIMELINE FUNCTIONS ---
 function setupTimelineControls() {
   // Delay initialization to ensure DOM is ready
@@ -364,6 +379,7 @@ function setupTimelineControls() {
         window.redrawCanvas();
       }
       updateTimelineUI();
+      updateCursorForTool(state.selectionTool);
     });
     
     // Slider - stop playback when user starts dragging
@@ -450,6 +466,7 @@ function togglePlayback() {
   
   // Force UI update to ensure slider reflects current state
   updateTimelineUI();
+  updateCursorForTool(state.selectionTool);
 }
 
 function cyclePlaybackSpeed() {
@@ -964,6 +981,7 @@ function handleKeyDown(e) {
      e.preventDefault();
      undo();
      updateTimelineUI();
+     updateCursorForTool(state.selectionTool);
      return;
    }
  
@@ -972,6 +990,7 @@ function handleKeyDown(e) {
      e.preventDefault();
      redo();
      updateTimelineUI();
+     updateCursorForTool(state.selectionTool);
      return;
    }
  
@@ -980,6 +999,7 @@ function handleKeyDown(e) {
      e.preventDefault();
      undo();
      updateTimelineUI();
+     updateCursorForTool(state.selectionTool);
      return;
    }
  
@@ -988,6 +1008,7 @@ function handleKeyDown(e) {
      e.preventDefault();
      redo();
      updateTimelineUI();
+     updateCursorForTool(state.selectionTool);
      return;
    }
 }
