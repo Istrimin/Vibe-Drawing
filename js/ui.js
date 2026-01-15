@@ -72,8 +72,6 @@ export function showDevTools() {
       const stateData = {
         images: state.images,
         drawingPaths: state.drawingPaths,
-        layers: state.layers,
-        activeLayer: state.activeLayer,
         zoomLevel: state.zoomLevel,
         panOffset: state.panOffset,
         showGrid: state.showGrid

@@ -1,167 +1,46 @@
-import { state, elements } from './state.js';
-import { updateStatusBar } from './ui.js';
-import { getPathBoundingBox } from './geometry.js';
+import { state } from './state.js';
 
-// Cache for image objects to avoid recreating them on every redraw
-const imageCache = new Map();
+/**
+ * Canvas Module - Handles canvas setup, resizing, and rendering
+ */
 
-// Helper function to get or create an Image from base64 data
-function getImageFromData(src) {
-    if (imageCache.has(src)) {
-        return imageCache.get(src);
-    }
-    const img = new Image();
-    img.onload = () => {
-        // Optionally redraw when image loads
-        if (state.ctx && state.images.length > 0) {
-            // The image will be drawn on next redraw
-        }
-    };
-    img.src = src;
-    imageCache.set(src, img);
-    return img;
-}
-
-
-export function setupCanvas() {
-  state.canvas = elements.canvas;
+// Initialize canvas
+function setupCanvas() {
+  state.canvas = document.getElementById('drawingCanvas');
   state.ctx = state.canvas.getContext('2d');
   resizeCanvas();
   window.addEventListener('resize', resizeCanvas);
 }
 
-export function resizeCanvas() {
+// Resize canvas to fit container
+function resizeCanvas() {
   const container = document.querySelector('.canvas-container');
-  if (state.canvas) {
+  if (container && state.canvas) {
     state.canvas.width = container.clientWidth;
     state.canvas.height = container.clientHeight;
     redrawCanvas();
   }
 }
 
-export function zoom(factor, mouseX, mouseY) {
-  const oldZoom = state.zoomLevel;
-  state.zoomLevel = Math.max(1e-6, state.zoomLevel * factor); // Removed upper limit, kept very small lower limit
-
-  const rect = elements.canvas.getBoundingClientRect();
-  const centerX = mouseX ?? rect.width / 2;
-  const centerY = mouseY ?? rect.height / 2;
-
-  state.panOffset.x = centerX - (centerX - state.panOffset.x) * (state.zoomLevel / oldZoom);
-  state.panOffset.y = centerY - (centerY - state.panOffset.y) * (state.zoomLevel / oldZoom);
-
- redrawCanvas();
-  updateStatusBar(`Zoom: ${Math.round(state.zoomLevel * 100)}%`);
+// Clear canvas
+function clearCanvas() {
+  if (state.ctx && state.canvas) {
+    state.ctx.clearRect(0, 0, state.canvas.width, state.canvas.height);
+  }
 }
 
-export function redrawCanvas() {
-  if (!state.ctx) return;
-
-  state.ctx.fillStyle = state.backgroundColor;
-  state.ctx.fillRect(0, 0, state.canvas.width, state.canvas.height);
+// Draw grid
+function drawGrid() {
+  if (!state.showGrid || !state.ctx) return;
 
   state.ctx.save();
   state.ctx.translate(state.panOffset.x, state.panOffset.y);
   state.ctx.scale(state.zoomLevel, state.zoomLevel);
 
-  drawGrid();
-
-  // Draw vector paths first
-  state.drawingPaths.forEach(path => {
-    if (path.length > 1) {
-      drawPath(path);
-    }
-  });
-
-  // Draw current path being drawn
-  if (state.currentPath.length > 1) {
-    drawPath(state.currentPath);
-  }
-
-  // Draw filled grid cells with symmetry support
-  let gridCellsToDraw = state.gridCells;
-  
-  // Apply transformation based on mode
-  if (state.gridTransformationMode === 'permanent') {
-    gridCellsToDraw = state.symmetry.transformGridCells(state.gridCells, state.gridSize);
-  }
-  
-  gridCellsToDraw.forEach(cell => {
-    state.ctx.fillStyle = cell.color;
-    
-    if (state.gridType === 'square') {
-      state.ctx.fillRect(cell.x, cell.y, state.gridSize, state.gridSize);
-    }
-  });
-
-  // Draw images on top of everything else
-  // Draw images on top of everything else
-  state.images.forEach(img => {
-    // Only draw images for the active layer that are visible
-    const layer = state.layers[img.layer];
-    if (!layer || !layer.visible) return;
-
-    state.ctx.save();
-    state.ctx.translate(img.x + img.width / 2, img.y + img.height / 2);
-    state.ctx.rotate(img.rotation);
-    state.ctx.drawImage(
-      getImageFromData(img.src),
-      -img.width / 2,
-      -img.height / 2,
-      img.width,
-      img.height
-    );
-    state.ctx.restore();
-  });
-
-  if (state.isSelecting) {
-    if (state.selectionTool === 'lasso') {
-        drawLassoPath();
-    } else {
-        drawSelectionRectangle();
-    }
-  }
-
-  // Draw bounding box for selected objects
-  if (state.selectedObjects.length > 0) {
-    state.selectedObjects.forEach(obj => {
-        drawObjectSelection(obj);
-    });
-  }
-
-  // Draw ghost preview for move operation
-  drawGhostPreview();
-
-  state.ctx.restore();
-}
-
-function drawPath(path) {
-  const transformedPaths = state.symmetry.transformPath(path);
-
-  transformedPaths.forEach(p => {
-    if (!p || p.length < 1) return;
-    
-    state.ctx.beginPath();
-    state.ctx.moveTo(p[0].x, p[0].y);
-    for (let i = 1; i < p.length; i++) {
-        const point = p[i];
-        state.ctx.lineTo(point.x, point.y);
-    }
-    state.ctx.strokeStyle = p[0].color;
-    state.ctx.lineWidth = p[0].size;
-    state.ctx.lineCap = 'round';
-    state.ctx.lineJoin = 'round';
-    state.ctx.stroke();
-  });
-}
-function drawGrid() {
-  if (!state.showGrid) return;
-  const gridSize = state.gridSize;
-  const gridColor = state.gridColor;
-
-  state.ctx.strokeStyle = gridColor;
+  state.ctx.strokeStyle = state.gridColor;
   state.ctx.lineWidth = 0.5;
 
+  // Calculate visible area
   const visibleWidth = state.canvas.width / state.zoomLevel;
   const visibleHeight = state.canvas.height / state.zoomLevel;
   const startX = -state.panOffset.x / state.zoomLevel;
@@ -169,164 +48,243 @@ function drawGrid() {
   const endX = startX + visibleWidth;
   const endY = startY + visibleHeight;
 
-  if (state.gridType === 'square') {
-    // Draw square grid (original implementation)
-    const firstVerticalLine = Math.floor(startX / gridSize) * gridSize;
-    const lastVerticalLine = Math.ceil(endX / gridSize) * gridSize;
-    for (let x = firstVerticalLine; x <= lastVerticalLine; x += gridSize) {
-      state.ctx.beginPath();
-      state.ctx.moveTo(x, startY);
-      state.ctx.lineTo(x, endY);
-      state.ctx.stroke();
-    }
+  // Draw vertical lines - infinite in both directions
+  const firstVerticalLine = Math.floor(startX / state.gridSize) * state.gridSize;
+  const lastVerticalLine = Math.ceil(endX / state.gridSize) * state.gridSize;
 
-    const firstHorizontalLine = Math.floor(startY / gridSize) * gridSize;
-    const lastHorizontalLine = Math.ceil(endY / gridSize) * gridSize;
-    for (let y = firstHorizontalLine; y <= lastHorizontalLine; y += gridSize) {
-      state.ctx.beginPath();
-      state.ctx.moveTo(startX, y);
-      state.ctx.lineTo(endX, y);
-      state.ctx.stroke();
-    }
+  for (let x = firstVerticalLine; x <= lastVerticalLine; x += state.gridSize) {
+    state.ctx.beginPath();
+    state.ctx.moveTo(x, startY);
+    state.ctx.lineTo(x, endY);
+    state.ctx.stroke();
   }
+
+  // Draw horizontal lines - infinite in both directions
+  const firstHorizontalLine = Math.floor(startY / state.gridSize) * state.gridSize;
+  const lastHorizontalLine = Math.ceil(endY / state.gridSize) * state.gridSize;
+
+  for (let y = firstHorizontalLine; y <= lastHorizontalLine; y += state.gridSize) {
+    state.ctx.beginPath();
+    state.ctx.moveTo(startX, y);
+    state.ctx.lineTo(endX, y);
+    state.ctx.stroke();
+  }
+
+  state.ctx.restore();
 }
 
+// Zoom functionality
+function zoom(factor) {
+  const oldZoom = state.zoomLevel;
+ state.zoomLevel = Math.max(1e-6, state.zoomLevel * factor); // Removed upper limit, kept very small lower limit
 
-function drawLassoPath() {
-    if (state.selectionPath.length < 2) return;
-    state.ctx.strokeStyle = '#0095ff';
-    state.ctx.lineWidth = 1;
-    state.ctx.setLineDash([5, 5]);
+ // Adjust pan offset to zoom around center
+  const rect = state.canvas.getBoundingClientRect();
+  const centerX = rect.width / 2;
+  const centerY = rect.height / 2;
+
+  state.panOffset.x = centerX - (centerX - state.panOffset.x) * (state.zoomLevel / oldZoom);
+  state.panOffset.y = centerY - (centerY - state.panOffset.y) * (state.zoomLevel / oldZoom);
+
+  redrawCanvas();
+  return state.zoomLevel * 100;
+}
+
+// Reset zoom
+function resetZoom() {
+  zoom(1 / state.zoomLevel);
+}
+
+// Toggle grid visibility
+function toggleGrid() {
+  state.showGrid = !state.showGrid;
+  const gridBtn = document.getElementById('gridBtn');
+  if (gridBtn) {
+    gridBtn.setAttribute('data-active', state.showGrid);
+    if (state.showGrid) {
+      gridBtn.classList.add('active');
+    } else {
+      gridBtn.classList.remove('active');
+    }
+  }
+  redrawCanvas();
+}
+
+// Redraw entire canvas
+function redrawCanvas() {
+  if (!state.ctx || !state.canvas) return;
+
+  clearCanvas();
+
+  // Apply zoom and pan
+  state.ctx.save();
+  state.ctx.translate(state.panOffset.x, state.panOffset.y);
+  state.ctx.scale(state.zoomLevel, state.zoomLevel);
+
+  // Draw background
+  state.ctx.fillStyle = state.backgroundColor;
+  const visibleWidth = state.canvas.width / state.zoomLevel;
+  const visibleHeight = state.canvas.height / state.zoomLevel;
+  const startX = -state.panOffset.x / state.zoomLevel;
+  const startY = -state.panOffset.y / state.zoomLevel;
+  state.ctx.fillRect(startX, startY, visibleWidth, visibleHeight);
+
+  // Draw grid
+  drawGrid();
+
+  // Draw drawing paths
+  state.drawingPaths.forEach(path => {
+    if (path.length > 0) {
+      state.ctx.strokeStyle = path[0].color;
+      state.ctx.lineWidth = path[0].size;
+      state.ctx.lineCap = 'round';
+      state.ctx.lineJoin = 'round';
+      state.ctx.beginPath();
+      state.ctx.moveTo(path[0].x, path[0].y);
+      for (let i = 1; i < path.length; i++) {
+        state.ctx.lineTo(path[i].x, path[i].y);
+      }
+      state.ctx.stroke();
+    }
+  });
+
+  // Draw current path if drawing
+  if (state.currentPath.length > 0) {
+    state.ctx.strokeStyle = state.currentPath[0].color;
+    state.ctx.lineWidth = state.currentPath[0].size;
+    state.ctx.lineCap = 'round';
+    state.ctx.lineJoin = 'round';
     state.ctx.beginPath();
-    state.ctx.moveTo(state.selectionPath[0].x, state.selectionPath[0].y);
-    for (let i = 1; i < state.selectionPath.length; i++) {
-        state.ctx.lineTo(state.selectionPath[i].x, state.selectionPath[i].y);
+    state.ctx.moveTo(state.currentPath[0].x, state.currentPath[0].y);
+    for (let i = 1; i < state.currentPath.length; i++) {
+      state.ctx.lineTo(state.currentPath[i].x, state.currentPath[i].y);
     }
     state.ctx.stroke();
-    state.ctx.setLineDash([]);
-}
-
-function drawSelectionRectangle() {
-  const start = state.selectionStart;
-  const end = state.selectionEnd;
-  state.ctx.strokeStyle = '#0095ff';
-  state.ctx.lineWidth = 1;
-  state.ctx.setLineDash([5, 5]);
-  state.ctx.beginPath();
-  state.ctx.rect(
-    Math.min(start.x, end.x),
-    Math.min(start.y, end.y),
-    Math.abs(end.x - start.x),
-    Math.abs(end.y - start.y)
-  );
-  state.ctx.stroke();
-  state.ctx.setLineDash([]);
-}
-
-function drawSelection(img) {
-  state.ctx.strokeStyle = '#0095ff';
-  state.ctx.lineWidth = 2;
-  state.ctx.setLineDash([5, 5]);
-  state.ctx.strokeRect(-img.width / 2, -img.height / 2, img.width, img.height);
-  state.ctx.setLineDash([]);
-
-  const handleSize = 10;
-  state.ctx.fillStyle = '#0095ff';
-  state.ctx.fillRect(
-    img.width / 2 - handleSize / 2,
-    img.height / 2 - handleSize / 2,
-    handleSize,
-    handleSize
-  );
-
-  state.ctx.fillStyle = '#ff0095';
-  state.ctx.beginPath();
-  state.ctx.arc(0, -img.height / 2 - 20, 8, 0, Math.PI * 2);
-  state.ctx.fill();
-}
-
-function drawObjectSelection(obj) {
-    let bbox;
-    if (obj.type === 'image') {
-        bbox = { minX: obj.obj.x, minY: obj.obj.y, maxX: obj.obj.x + obj.obj.width, maxY: obj.obj.y + obj.obj.height };
-    } else if (obj.type === 'path') {
-        bbox = getPathBoundingBox(obj.obj);
-    } else if (obj.type === 'grid-cell') {
-        if (state.gridType === 'square') {
-            bbox = { minX: obj.obj.x, minY: obj.obj.y, maxX: obj.obj.x + state.gridSize, maxY: obj.obj.y + state.gridSize };
-        }
-    }
-
-    if (bbox) {
-        state.ctx.strokeStyle = '#0095ff';
-        state.ctx.lineWidth = 1;
-        state.ctx.setLineDash([3, 3]);
-        state.ctx.strokeRect(bbox.minX, bbox.minY, bbox.maxX - bbox.minX, bbox.maxY - bbox.minY);
-        state.ctx.setLineDash([]);
-    }
-}
-
-function drawGhostPreview() {
-    if (!state.isGhostVisible || state.selectedObjects.length === 0) return;
-
-    const offset = state.ghostOffset;
-    state.ctx.globalAlpha = 0.5; // Semi-transparent
-
-    state.selectedObjects.forEach(selected => {
-        if (selected.type === 'image') {
-            const img = selected.obj;
-            state.ctx.save();
-            state.ctx.translate(img.x + offset.x + img.width / 2, img.y + offset.y + img.height / 2);
-            state.ctx.rotate(img.rotation);
-            state.ctx.drawImage(
-                getImageFromData(img.src),
-                -img.width / 2,
-                -img.height / 2,
-                img.width,
-                img.height
-            );
-            state.ctx.restore();
-        } else if (selected.type === 'path') {
-            const path = selected.obj;
-            if (path.length > 1) {
-                state.ctx.beginPath();
-                state.ctx.moveTo(path[0].x + offset.x, path[0].y + offset.y);
-                for (let i = 1; i < path.length; i++) {
-                    state.ctx.lineTo(path[i].x + offset.x, path[i].y + offset.y);
-                }
-                state.ctx.strokeStyle = path[0].color;
-                state.ctx.lineWidth = path[0].size;
-                state.ctx.lineCap = 'round';
-                state.ctx.lineJoin = 'round';
-                state.ctx.stroke();
-            }
-        } else if (selected.type === 'grid-cell') {
-            const cell = selected.obj;
-            state.ctx.fillStyle = cell.color;
-            
-            if (state.gridType === 'square') {
-                state.ctx.fillRect(cell.x + offset.x, cell.y + offset.y, state.gridSize, state.gridSize);
-            }
-        }
-    });
-
-    state.ctx.globalAlpha = 1.0; // Reset opacity
-}
-
-export function clearCanvas() {
-  // Clear all drawing data
-  state.drawingPaths = [];
-  state.currentPath = [];
-  state.gridCells = [];
-  state.images = [];
-  state.selectedObjects = [];
-  
-  // Clear the canvas
-  if (state.ctx) {
-    state.ctx.fillStyle = state.backgroundColor;
-    state.ctx.fillRect(0, 0, state.canvas.width, state.canvas.height);
   }
-  
-  redrawCanvas();
-  updateStatusBar('Canvas cleared');
+
+  // Draw grid cells
+  state.gridCells.forEach(cell => {
+    state.ctx.fillStyle = cell.color;
+    state.ctx.fillRect(cell.x, cell.y, state.gridSize, state.gridSize);
+  });
+
+  // Draw images
+  state.images.forEach(img => {
+    const imgElement = new Image();
+    imgElement.src = img.src;
+    // Since it's data URL, it should be instant, but to be safe
+    if (imgElement.complete) {
+      state.ctx.save();
+      state.ctx.translate(img.x, img.y);
+      state.ctx.rotate(img.rotation);
+      state.ctx.drawImage(imgElement, -img.width / 2, -img.height / 2, img.width, img.height);
+      state.ctx.restore();
+    } else {
+      imgElement.onload = () => {
+        state.ctx.save();
+        state.ctx.translate(img.x, img.y);
+        state.ctx.rotate(img.rotation);
+        state.ctx.drawImage(imgElement, -img.width / 2, -img.height / 2, img.width, img.height);
+        state.ctx.restore();
+      };
+    }
+  });
+
+  // Draw symmetry lines
+  drawSymmetryLines();
+
+  state.ctx.restore();
 }
+
+// Get current canvas state
+function getCanvasState() {
+  return {
+    zoomLevel: state.zoomLevel,
+    panOffset: state.panOffset,
+    showGrid: state.showGrid
+  };
+}
+
+// Set canvas state
+function setCanvasState(canvasState) {
+  state.zoomLevel = canvasState.zoomLevel !== undefined ? canvasState.zoomLevel : 1;
+  state.panOffset = canvasState.panOffset || { x: 0, y: 0 };
+  state.showGrid = canvasState.showGrid !== undefined ? canvasState.showGrid : true;
+}
+
+function drawSymmetryLines() {
+  if (!state.symmetry.isActive() || !state.showSymmetryLine) return;
+
+  const { ctx, canvas, zoomLevel, panOffset } = state;
+
+  // Calculate visible area in world coordinates
+  const visibleWidth = canvas.width / zoomLevel;
+  const visibleHeight = canvas.height / zoomLevel;
+  const startX = -panOffset.x / zoomLevel;
+  const startY = -panOffset.y / zoomLevel;
+  const endX = startX + visibleWidth;
+  const endY = startY + visibleHeight;
+
+  ctx.save();
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
+  ctx.lineWidth = 1 / zoomLevel; // Keep line width consistent regardless of zoom
+  ctx.setLineDash([5 / zoomLevel, 5 / zoomLevel]);
+
+  switch (state.symmetry.mode) {
+    case 'vertical':
+      ctx.beginPath();
+      ctx.moveTo(0, startY);
+      ctx.lineTo(0, endY);
+      ctx.stroke();
+      break;
+    case 'horizontal':
+      ctx.beginPath();
+      ctx.moveTo(startX, 0);
+      ctx.lineTo(endX, 0);
+      ctx.stroke();
+      break;
+    case 'quad':
+      // Vertical line
+      ctx.beginPath();
+      ctx.moveTo(0, startY);
+      ctx.lineTo(0, endY);
+      ctx.stroke();
+      // Horizontal line
+      ctx.beginPath();
+      ctx.moveTo(startX, 0);
+      ctx.lineTo(endX, 0);
+      ctx.stroke();
+      break;
+    case 'radial':
+      const angleIncrement = (2 * Math.PI) / state.symmetry.radialRays;
+      const radius = Math.max(visibleWidth, visibleHeight); // A radius large enough to cover the screen
+
+      for (let i = 0; i < state.symmetry.radialRays; i++) {
+        const angle = angleIncrement * i;
+        const endX = Math.cos(angle) * radius;
+        const endY = Math.sin(angle) * radius;
+
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.lineTo(endX, endY);
+        ctx.stroke();
+      }
+      break;
+  }
+
+  ctx.restore();
+}
+
+export {
+  setupCanvas,
+  resizeCanvas,
+  clearCanvas,
+  drawGrid,
+  zoom,
+  resetZoom,
+  toggleGrid,
+  redrawCanvas,
+  getCanvasState,
+  setCanvasState,
+  drawSymmetryLines
+};

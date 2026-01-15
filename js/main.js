@@ -494,7 +494,18 @@ function handleCanvasMouseDown(e) {
       if (existingCellIndex !== -1) {
           state.gridCells[existingCellIndex].color = state.drawingColor;
       } else {
-          state.gridCells.push({ x: cellX, y: cellY, color: state.drawingColor });
+          const newCell = { x: cellX, y: cellY, color: state.drawingColor };
+          state.gridCells.push(newCell);
+          // Add symmetric cells
+          if (state.symmetry.isActive()) {
+            const symmetric = state.symmetry.transformGridCells([newCell], state.gridSize);
+            symmetric.shift(); // remove original
+            symmetric.forEach(s => {
+              if (!state.gridCells.some(c => c.x === s.x && c.y === s.y)) {
+                state.gridCells.push(s);
+              }
+            });
+          }
       }
     } else if (e.button === 2) { // Right-click to erase grid cell
       state.isRightClickErasing = true; // Flag for continuous erasing
@@ -636,7 +647,18 @@ function handleCanvasMouseMove(e) {
                     if (existingCellIndex !== -1) {
                         state.gridCells[existingCellIndex].color = state.drawingColor;
                     } else {
-                        state.gridCells.push({ x: cell.x, y: cell.y, color: state.drawingColor });
+                        const newCell = { x: cell.x, y: cell.y, color: state.drawingColor };
+                        state.gridCells.push(newCell);
+                        // Add symmetric cells
+                        if (state.symmetry.isActive()) {
+                          const symmetric = state.symmetry.transformGridCells([newCell], state.gridSize);
+                          symmetric.shift(); // remove original
+                          symmetric.forEach(s => {
+                            if (!state.gridCells.some(c => c.x === s.x && c.y === s.y)) {
+                              state.gridCells.push(s);
+                            }
+                          });
+                        }
                     }
                 } else if (e.buttons === 2) { // Right mouse button (erase)
                     state.gridCells = state.gridCells.filter(c => !(c.x === cell.x && c.y === cell.y));
@@ -755,10 +777,11 @@ function handleCanvasMouseUp(e) {
 
     // Redraw canvas to show objects in new positions
     redrawCanvas();
+    saveState();
   }
 
   if (state.isDragging || state.isResizing || state.isRotating) {
-    // State already saved in mousedown
+    saveState();
   }
   if (state.isPanning) {
     if (state.spacebarDown) {
@@ -770,11 +793,15 @@ function handleCanvasMouseUp(e) {
   if (state.isDrawing) {
     state.isDrawing = false;
     if (state.currentPath.length > 1) {
-      state.drawingPaths.push(state.currentPath);
-      // State already saved in mousedown
+      if (state.symmetry.isActive()) {
+        state.drawingPaths.push(...state.symmetry.transformPath(state.currentPath, state.gridSize));
+      } else {
+        state.drawingPaths.push(state.currentPath);
+      }
+      saveState(); // Save state AFTER the new path is added
     } else if (state.selectionTool === 'grid-draw' && state.lastGridCell.x !== null) {
       // For grid draw, a single click also counts as an action for undo/redo
-      // State already saved in mousedown
+      saveState(); // Save state AFTER the grid cell is added
     }
     state.currentPath = [];
     state.lastGridCell = { x: null, y: null }; // Reset last grid cell
@@ -1002,7 +1029,7 @@ function uploadImages(files) {
   });
 }
 
-export function getImageFromData(src) {
+function getImageFromData(src) {
     const img = new Image();
     img.src = src;
     return img;
