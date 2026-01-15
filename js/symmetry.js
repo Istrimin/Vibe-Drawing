@@ -80,48 +80,58 @@ export class Symmetry {
         switch (this.mode) {
             case 'vertical':
                 cells.forEach(cell => {
-                    const mirroredX = -Math.floor(cell.x / gridSize) * gridSize;
-                    if (mirroredX !== cell.x) {
+                    const centerX = cell.x + gridSize / 2;
+                    const mirroredCenterX = -centerX;
+                    const snappedX = Math.floor(mirroredCenterX / gridSize) * gridSize;
+                    if (snappedX !== cell.x) {
                         transformedCells.push({
                             ...cell,
-                            x: mirroredX
+                            x: snappedX
                         });
                     }
                 });
                 break;
             case 'horizontal':
                 cells.forEach(cell => {
-                    const mirroredY = -Math.floor(cell.y / gridSize) * gridSize;
-                    if (mirroredY !== cell.y) {
+                    const centerY = cell.y + gridSize / 2;
+                    const mirroredCenterY = -centerY;
+                    const snappedY = Math.floor(mirroredCenterY / gridSize) * gridSize;
+                    if (snappedY !== cell.y) {
                         transformedCells.push({
                             ...cell,
-                            y: mirroredY
+                            y: snappedY
                         });
                     }
                 });
                 break;
             case 'quad':
                 cells.forEach(cell => {
-                    const mirroredX = -Math.floor(cell.x / gridSize) * gridSize;
-                    const mirroredY = -Math.floor(cell.y / gridSize) * gridSize;
+                    const centerX = cell.x + gridSize / 2;
+                    const centerY = cell.y + gridSize / 2;
+                    const mirroredCenterX = -centerX;
+                    const mirroredCenterY = -centerY;
+                    const snappedX = Math.floor(mirroredCenterX / gridSize) * gridSize;
+                    const snappedY = Math.floor(mirroredCenterY / gridSize) * gridSize;
                     
-                    if (mirroredX !== cell.x) {
+                    if (snappedX !== cell.x) {
                         transformedCells.push({
                             ...cell,
-                            x: mirroredX
+                            x: snappedX,
+                            y: cell.y
                         });
                     }
-                    if (mirroredY !== cell.y) {
+                    if (snappedY !== cell.y) {
                         transformedCells.push({
                             ...cell,
-                            y: mirroredY
+                            x: cell.x,
+                            y: snappedY
                         });
                     }
-                    if (mirroredX !== cell.x && mirroredY !== cell.y) {
+                    if (snappedX !== cell.x && snappedY !== cell.y) {
                         transformedCells.push({
                             ...cell,
-                            x: mirroredX,
-                            y: mirroredY
+                            x: snappedX,
+                            y: snappedY
                         });
                     }
                 });
