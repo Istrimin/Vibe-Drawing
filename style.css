@@ -410,13 +410,14 @@ input#gridColorPicker { width: 30px; height: 30px; }
 .timeline-slider {
     -webkit-appearance: none;
     appearance: none;
-    width: 150px;
+    width: 100%;
     height: 4px;
     background: #444;
     outline: none;
     border-radius: 2px;
     cursor: pointer;
     position: relative;
+    min-width: 200px; /* Minimum width to ensure usability */
 }
 
 .timeline-slider::-webkit-slider-thumb {
@@ -487,35 +488,8 @@ input#gridColorPicker { width: 30px; height: 30px; }
     background-position: 0 50%;
 }
 
-/* Step markers for timeline */
-.timeline-slider[data-steps] {
-    background-image:
-        repeating-linear-gradient(
-            to right,
-            #7b61ff 0px,
-            #7b61ff 1px,
-            transparent 1px,
-            transparent 10px
-        );
-    background-size: calc(100% / max(1, var(--steps, 1))) 100%;
-    background-repeat: repeat-x;
-    background-position: 0 50%;
-}
 
 /* Ensure step markers are visible */
-.timeline-slider[data-steps]::-webkit-slider-thumb {
-    box-shadow: 0 0 0 2px #1e1e1e, 0 0 0 4px #7b61ff;
-    border: 2px solid #1e1e1e;
-    z-index: 20;
-}
-
-.timeline-slider[data-steps]::-moz-range-thumb {
-    box-shadow: 0 0 0 2px #1e1e1e, 0 0 0 4px #7b61ff;
-    border: 2px solid #1e1e1e;
-    z-index: 20;
-}
-
-/* Improve step marker visibility */
 .timeline-slider[data-steps]::-webkit-slider-thumb {
     box-shadow: 0 0 0 2px #1e1e1e, 0 0 0 4px #7b61ff;
     border: 2px solid #1e1e1e;
