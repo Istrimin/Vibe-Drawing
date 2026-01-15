@@ -3,7 +3,7 @@ import { setupCanvas, redrawCanvas, zoom, clearCanvas } from './canvas.js';
 import { updateActiveTool, updateStatusBar, toggleGrid, showDevTools } from './ui.js';
 
 import { floodFill } from './fill.js';
-import { initCursors, setupCursorKeyboardShortcuts, setPipetteCursor, setPencilCursor, setEraserCursor, resetCursor } from './cursors.js';
+import { initCursors, setPipetteCursor, setPencilCursor, setEraserCursor, resetCursor } from './cursors.js';
 import { getPathBoundingBox, doRectanglesIntersect, getCellsBetweenPoints } from './geometry.js';
 import { undo, redo, saveState, startPlayback, stopPlayback, pausePlayback, resumePlayback, setPlaybackSpeed, scrubToFrame, getPlaybackState, getHistoryLength } from './history.js';
 
@@ -15,7 +15,7 @@ function init() {
   setupCanvas();
   setupEventListeners();
   initCursors();
-  setupCursorKeyboardShortcuts();
+  // setupCursorKeyboardShortcuts(); // Disabled to prevent conflicts with system tabs
   setupUI();
   loadState();
   updateStatusBar('Ready');
@@ -887,15 +887,9 @@ function pickColorFromCanvas(e) {
 }
 
 function handleKeyDown(e) {
-  if (e.key === ' ') {
-    e.preventDefault();
-    if (!state.spacebarDown) {
-      state.spacebarDown = true;
-      elements.canvas.style.cursor = 'grab';
-    }
-  }
-
   // Alt key - temporarily activate pipette tool with pipette cursor
+  // Disabled to prevent conflicts with system tabs
+  /*
   if (e.key === 'Alt' && !state.altKeyDown) {
     e.preventDefault();
     state.altKeyDown = true;
@@ -908,6 +902,7 @@ function handleKeyDown(e) {
     setPipetteCursor();
     updateStatusBar('Tool: Color Picker (Alt)');
   }
+  */
 
   if (e.key === 'Delete' && state.selectedImage) {
     state.images = state.images.filter(img => img !== state.selectedImage);
@@ -954,21 +949,25 @@ function handleKeyDown(e) {
      return;
    }
  
-   // Undo with Z key (without Ctrl)
+   // Undo with Z key (without Ctrl) - disabled to prevent conflicts
+   /*
    if (e.code === 'KeyZ' && !e.ctrlKey && !e.metaKey) {
      e.preventDefault();
      undo();
      updateTimelineUI();
      return;
    }
+   */
  
-   // Redo with X key (without Ctrl)
+   // Redo with X key (without Ctrl) - disabled to prevent conflicts
+   /*
    if (e.code === 'KeyX' && !e.ctrlKey && !e.metaKey) {
      e.preventDefault();
      redo();
      updateTimelineUI();
      return;
    }
+   */
 }
 
 function handleKeyUp(e) {

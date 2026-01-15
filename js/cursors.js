@@ -221,15 +221,7 @@ function toggleCursorPanel() {
     }
 }
 
-// Keyboard shortcut for cursor panel
-export function setupCursorKeyboardShortcuts() {
-    document.addEventListener('keydown', (e) => {
-        if (e.key === 'c' || e.key === 'C') {
-            toggleCursorPanel();
-            e.preventDefault();
-        }
-    });
-}
+
 
 // Get current cursor state
 export function getCurrentCursor() {
