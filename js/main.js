@@ -365,6 +365,14 @@ function setupTimelineControls() {
       }
       updateTimelineUI();
     });
+    
+    // Slider - stop playback when user starts dragging
+    timelineSlider?.addEventListener('mousedown', () => {
+      const playbackState = getPlaybackState();
+      if (playbackState.isPlaying) {
+        stopPlayback();
+      }
+    });
 
     // Slider - stop playback when user starts dragging
     timelineSlider?.addEventListener('mousedown', () => {
@@ -376,25 +384,33 @@ function setupTimelineControls() {
   }, 0);
 }
 
-function updateTimelineUI() {
+function updateTimelineUI(currentFrame = null, totalFrames = null) {
   // Re-query elements in case they changed
   const timelineSlider = document.getElementById('timelineSlider');
   const timelineFrame = document.getElementById('timelineFrame');
   const timelinePlayBtn = document.getElementById('timelinePlayBtn');
 
   const playbackState = getPlaybackState();
-  const totalFrames = getHistoryLength();
-  const currentFrame = state.currentHistoryIndex + 1; // Since index starts at -1
+  const actualTotalFrames = totalFrames !== null ? totalFrames : getHistoryLength();
+  const actualCurrentFrame = currentFrame !== null ? currentFrame : (state.currentHistoryIndex + 1); // Since index starts at -1
 
   // Update slider
   if (timelineSlider) {
-    timelineSlider.max = Math.max(0, totalFrames);
-    timelineSlider.value = currentFrame;
+    timelineSlider.max = Math.max(0, actualTotalFrames);
+    timelineSlider.value = actualCurrentFrame;
+    
+    // Set data attributes for step indicators and progress
+    timelineSlider.setAttribute('data-steps', actualTotalFrames);
+    timelineSlider.style.setProperty('--steps', actualTotalFrames);
+    
+    // Calculate and set progress percentage
+    const progressPercentage = actualTotalFrames > 0 ? (actualCurrentFrame / actualTotalFrames) * 100 : 0;
+    timelineSlider.style.setProperty('--progress-percentage', progressPercentage + '%');
   }
 
   // Update frame counter
   if (timelineFrame) {
-    timelineFrame.textContent = `${currentFrame}/${totalFrames}`;
+    timelineFrame.textContent = `${actualCurrentFrame}/${actualTotalFrames}`;
   }
 
   // Update play button state
@@ -413,8 +429,15 @@ function updateTimelineUI() {
 function togglePlayback() {
   const playbackState = getPlaybackState();
   if (playbackState.isPlaying) {
-    stopPlayback();
+    pausePlayback();
   } else {
+    // If we've reached the end, restart from the beginning
+    if (playbackState.currentFrame >= playbackState.totalFrames) {
+      // Reset to beginning
+      state.currentHistoryIndex = -1;
+      // Update UI to show beginning
+      updateTimelineUI();
+    }
     startPlayback(updateTimelineUI);
   }
   
@@ -424,6 +447,9 @@ function togglePlayback() {
     timelinePlayBtn.textContent = getPlaybackState().isPlaying ? '⏸' : '▶';
     timelinePlayBtn.classList.toggle('playing', getPlaybackState().isPlaying);
   }
+  
+  // Force UI update to ensure slider reflects current state
+  updateTimelineUI();
 }
 
 function cyclePlaybackSpeed() {
@@ -950,24 +976,20 @@ function handleKeyDown(e) {
    }
  
    // Undo with Z key (without Ctrl) - disabled to prevent conflicts
-   /*
    if (e.code === 'KeyZ' && !e.ctrlKey && !e.metaKey) {
      e.preventDefault();
      undo();
      updateTimelineUI();
      return;
    }
-   */
  
    // Redo with X key (without Ctrl) - disabled to prevent conflicts
-   /*
    if (e.code === 'KeyX' && !e.ctrlKey && !e.metaKey) {
      e.preventDefault();
      redo();
      updateTimelineUI();
      return;
    }
-   */
 }
 
 function handleKeyUp(e) {

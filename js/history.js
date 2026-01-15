@@ -229,6 +229,7 @@ export function scrubToFrame(frameIndex) {
     if (frameIndex < 0 || frameIndex >= state.undoStack.length) return;
 
     playbackCurrentFrame = frameIndex;
+    playbackTotalFrames = state.undoStack.length;
 
     // Load the selected frame from undo stack
     const frameState = state.undoStack[frameIndex];

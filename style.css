@@ -416,6 +416,7 @@ input#gridColorPicker { width: 30px; height: 30px; }
     outline: none;
     border-radius: 2px;
     cursor: pointer;
+    position: relative;
 }
 
 .timeline-slider::-webkit-slider-thumb {
@@ -426,6 +427,10 @@ input#gridColorPicker { width: 30px; height: 30px; }
     background: #7b61ff;
     border-radius: 50%;
     cursor: pointer;
+    z-index: 10;
+    position: relative;
+    box-shadow: 0 0 0 2px #1e1e1e, 0 0 0 4px #7b61ff;
+    border: 2px solid #1e1e1e;
 }
 
 .timeline-slider::-moz-range-thumb {
@@ -435,6 +440,92 @@ input#gridColorPicker { width: 30px; height: 30px; }
     border-radius: 50%;
     cursor: pointer;
     border: none;
+    z-index: 10;
+    position: relative;
+    box-shadow: 0 0 0 2px #1e1e1e, 0 0 0 4px #7b61ff;
+    border: 2px solid #1e1e1e;
+}
+
+/* Add step indicators for timeline */
+.timeline-slider::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: #333;
+    transform: translateY(-50%);
+    z-index: 1;
+}
+
+/* Step markers for timeline */
+.timeline-slider[data-steps] {
+    background: linear-gradient(to right, #444 0%, #444 100%);
+    background-size: 100% 100%;
+    background-repeat: no-repeat;
+}
+
+/* Progress indicator */
+.timeline-slider[data-progress] {
+    background-image:
+        linear-gradient(to right, #7b61ff 0%, #7b61ff var(--progress-percentage, 0%), #444 var(--progress-percentage, 0%), #444 100%);
+}
+
+/* Better step visualization */
+.timeline-slider[data-steps] {
+    background-image:
+        repeating-linear-gradient(
+            to right,
+            #7b61ff 0px,
+            #7b61ff 1px,
+            transparent 1px,
+            transparent 10px
+        );
+    background-size: calc(100% / max(1, var(--steps, 1))) 100%;
+    background-repeat: repeat-x;
+    background-position: 0 50%;
+}
+
+/* Step markers for timeline */
+.timeline-slider[data-steps] {
+    background-image:
+        repeating-linear-gradient(
+            to right,
+            #7b61ff 0px,
+            #7b61ff 1px,
+            transparent 1px,
+            transparent 10px
+        );
+    background-size: calc(100% / max(1, var(--steps, 1))) 100%;
+    background-repeat: repeat-x;
+    background-position: 0 50%;
+}
+
+/* Ensure step markers are visible */
+.timeline-slider[data-steps]::-webkit-slider-thumb {
+    box-shadow: 0 0 0 2px #1e1e1e, 0 0 0 4px #7b61ff;
+    border: 2px solid #1e1e1e;
+    z-index: 20;
+}
+
+.timeline-slider[data-steps]::-moz-range-thumb {
+    box-shadow: 0 0 0 2px #1e1e1e, 0 0 0 4px #7b61ff;
+    border: 2px solid #1e1e1e;
+    z-index: 20;
+}
+
+/* Improve step marker visibility */
+.timeline-slider[data-steps]::-webkit-slider-thumb {
+    box-shadow: 0 0 0 2px #1e1e1e, 0 0 0 4px #7b61ff;
+    border: 2px solid #1e1e1e;
+    z-index: 20;
+}
+
+.timeline-slider[data-steps]::-moz-range-thumb {
+    box-shadow: 0 0 0 2px #1e1e1e, 0 0 0 4px #7b61ff;
+    border: 2px solid #1e1e1e;
+    z-index: 20;
 }
 
 #timelineFrame {
@@ -531,5 +622,5 @@ input[type="color"]::-webkit-color-swatch {
 .export-format-btn.active {
     background: #7b61ff;
     border-color: #7b61ff;
-    color: white;
+    color: rgba(161, 4, 4, 0.589);
 }
