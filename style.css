@@ -572,12 +572,17 @@ input#backgroundColorPicker { width: 24px; height: 24px; }
     font-size: 13px;
     color: #eee;
 }
-.tasks-panel-actions {
+.tasks-count {
+    font-size: 11px;
+    color: #888;
+    font-weight: normal;
+}
+.tasks-header-actions {
     display: flex;
-    gap: 6px;
+    gap: 8px;
     align-items: center;
 }
-.tasks-panel-actions button {
+#tasksSortBtn, #tasksShowCompletedBtn {
     background: #333;
     color: #ccc;
     border: 1px solid #444;
@@ -587,28 +592,208 @@ input#backgroundColorPicker { width: 24px; height: 24px; }
     font-size: 11px;
     transition: all 0.15s ease;
 }
-.tasks-panel-actions button:hover {
+#tasksSortBtn:hover, #tasksShowCompletedBtn:hover {
     background: #444;
     color: white;
 }
-.tasks-panel textarea {
-    width: 100%;
+
+/* Tasks Container (Jupyter-style) */
+.tasks-add-row {
+    display: flex;
+    gap: 8px;
+    padding: 10px 12px;
+    border-bottom: 1px solid #333;
+    background: #252525;
+}
+.tasks-add-row input {
     flex: 1;
-    min-height: 250px;
-    max-height: 60vh;
     background: #111;
     color: #eee;
-    border: none;
-    padding: 12px;
-    font-family: 'Consolas', 'Courier New', monospace;
+    border: 1px solid #333;
+    border-radius: 4px;
+    padding: 6px 10px;
     font-size: 13px;
-    line-height: 1.5;
-    resize: none;
-    box-sizing: border-box;
 }
-.tasks-panel textarea:focus {
+.tasks-add-row input:focus {
     outline: none;
-    background: #0a0a0a;
+    border-color: #555;
+}
+.tasks-add-row button {
+    background: linear-gradient(135deg, #4ECDC4 0%, #2ab7a9 100%);
+    color: white;
+    border: none;
+    border-radius: 4px;
+    padding: 6px 12px;
+    cursor: pointer;
+    font-weight: bold;
+}
+.tasks-add-row button:hover {
+    background: linear-gradient(135deg, #6ed7cf 0%, #4ECDC4 100%);
+}
+
+.tasks-container {
+    flex: 1;
+    overflow-y: auto;
+    max-height: 55vh;
+    padding: 8px;
+}
+
+.tasks-empty {
+    text-align: center;
+    color: #666;
+    padding: 20px;
+    font-style: italic;
+}
+
+/* Task Cell (Jupyter-style) */
+.task-cell {
+    position: relative;
+    background: #1a1a1a;
+    border: 1px solid #333;
+    border-radius: 4px;
+    margin-bottom: 8px;
+    transition: all 0.2s ease;
+}
+.task-cell:hover {
+    border-color: #444;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+}
+.task-cell.completed {
+    opacity: 0.6;
+}
+.task-cell.completed .task-cell-content {
+    text-decoration: line-through;
+    color: #666;
+}
+
+.task-cell-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 6px 10px;
+    border-bottom: 1px solid #2a2a2a;
+    background: #222;
+    border-radius: 4px 4px 0 0;
+}
+.task-cell-header .task-date {
+    flex-shrink: 0;
+}
+.task-cell-header .task-delete-btn {
+    flex-shrink: 0;
+}
+
+.task-date {
+    font-size: 10px;
+    color: #888;
+    font-family: monospace;
+    flex: 1;
+}
+.task-editable-hint {
+    font-size: 9px;
+    color: #4ECDC4;
+    margin-left: 8px;
+    opacity: 0.7;
+}
+.task-complete-btn {
+    background: transparent;
+    border: 1px solid #444;
+    color: #4ECDC4;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 10px;
+    flex-shrink: 0;
+    transition: all 0.2s ease;
+}
+.task-complete-btn:hover {
+    background: #4ECDC4;
+    color: white;
+    border-color: #4ECDC4;
+}
+.task-delete-btn {
+    background: transparent;
+    border: none;
+    color: #555;
+    cursor: pointer;
+    font-size: 12px;
+    flex-shrink: 0;
+    transition: all 0.2s ease;
+    padding: 2px;
+}
+.task-delete-btn:hover {
+    color: #ff6b6b;
+}
+.task-editable-hint {
+    font-size: 9px;
+    color: #4ECDC4;
+    margin-left: 8px;
+    opacity: 0.7;
+}
+.task-complete-btn {
+    background: transparent;
+    border: 1px solid #444;
+    color: #4ECDC4;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 10px;
+    margin-left: auto;
+    transition: all 0.2s ease;
+}
+.task-complete-btn:hover {
+    background: #4ECDC4;
+    color: white;
+    border-color: #4ECDC4;
+}
+
+.task-cell-content {
+    padding: 10px 12px;
+    color: #ddd;
+    font-size: 13px;
+    line-height: 1.4;
+    word-wrap: break-word;
+}
+.task-cell-content.editable {
+    cursor: text;
+}
+.task-cell-content.editable:hover {
+    background: rgba(78, 205, 196, 0.1);
+}
+.task-edit-input {
+    width: 100%;
+    background: #222;
+    color: #eee;
+    border: 1px solid #4ECDC4;
+    border-radius: 3px;
+    padding: 4px 8px;
+    font-size: 13px;
+    font-family: inherit;
+}
+.task-edit-input:focus {
+    outline: none;
+    border-color: #6ed7cf;
+}
+
+.task-delete-btn {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    background: transparent;
+    border: none;
+    color: #555;
+    cursor: pointer;
+    font-size: 12px;
+    opacity: 0;
+    transition: all 0.2s ease;
+    padding: 4px;
+}
+.task-cell:hover .task-delete-btn {
+    opacity: 1;
+}
+.task-delete-btn:hover {
+    color: #ff6b6b;
 }
 
 

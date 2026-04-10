@@ -1,96 +1,49 @@
 /**
- * Tasks Module — простой список задач
- * Хранит данные в localStorage, без диалогов выбора файлов
+ * Tasks Module — менеджер задач в стиле Jupyter notebook
+ * Хранит данные в localStorage как массив объектов
  */
 
 const TASKS_STORAGE_KEY = 'vibeDrawingTasks';
-const TASKS_FILE_NAME = 'сделать.txt';
+const COMPLETED_TASKS_KEY = 'vibeDrawingCompletedTasks';
+const EDIT_TIMEOUT_MS = 30 * 60 * 1000; // 30 minutes
 
 let tasksBtn = null;
 let tasksPanel = null;
-let tasksTextarea = null;
+let tasksContainer = null;
+let addTaskInput = null;
 let tasksCloseBtn = null;
-let tasksExportBtn = null;
-let tasksImportBtn = null;
+
+let tasks = [];
+let completedTasks = [];
+let showCompleted = false;
 
 export function initTasks() {
     tasksBtn = document.getElementById('tasksBtn');
     tasksPanel = document.getElementById('tasksPanel');
-    tasksTextarea = document.getElementById('tasksTextarea');
-    tasksCloseBtn = document.getElementById('tasksCloseBtn');
-    tasksExportBtn = document.getElementById('tasksExportBtn');
-    tasksImportBtn = document.getElementById('tasksImportBtn');
+    tasksContainer = document.getElementById('tasksContainer');
+    addTaskInput = document.getElementById('addTaskInput');
 
     if (!tasksBtn) {
         console.warn('Tasks button not found');
         return;
     }
 
-    // Создаём панель если её нет
     if (!tasksPanel) {
         createTasksPanel();
     }
 
-    // Открытие панели
+    // Close button - just close panel, don't move tasks
+    const closeButton = tasksPanel.querySelector('#tasksCloseBtn');
+    closeButton.addEventListener('click', () => {
+        tasksPanel.style.display = 'none';
+    });
+
     tasksBtn.addEventListener('click', () => {
         tasksPanel.style.display = tasksPanel.style.display === 'none' || tasksPanel.style.display === '' ? 'block' : 'none';
         if (tasksPanel.style.display === 'block') {
             loadTasks();
         }
     });
-
-    // Закрытие
-    if (tasksCloseBtn) {
-        tasksCloseBtn.addEventListener('click', () => {
-            tasksPanel.style.display = 'none';
-        });
-    }
-
-    // Экспорт в файл
-    if (tasksExportBtn) {
-        tasksExportBtn.addEventListener('click', () => {
-            downloadTasksFile();
-        });
-    }
-
-    // Импорт из файла
-    if (tasksImportBtn) {
-        tasksImportBtn.addEventListener('click', () => {
-            const input = document.getElementById('tasksImportInput');
-            if (input) input.click();
-        });
-
-        const fileInput = document.getElementById('tasksImportInput');
-        if (fileInput) {
-            fileInput.addEventListener('change', (e) => {
-                const file = e.target.files[0];
-                if (!file) return;
-                const reader = new FileReader();
-                reader.onload = (ev) => {
-                    tasksTextarea.value = ev.target.result;
-                    saveTasks();
-                    fileInput.value = '';
-                };
-                reader.readAsText(file);
-            });
-        }
-    }
-
-    // Автосохранение при вводе
-    if (tasksTextarea) {
-        tasksTextarea.addEventListener('input', () => {
-            saveTasks();
-        });
-    }
-
-    // Закрытие по клику вне панели
-    if (tasksPanel) {
-        tasksPanel.addEventListener('click', (e) => {
-            if (e.target === tasksPanel) {
-                tasksPanel.style.display = 'none';
-            }
-        });
-    }
 }
 
 function createTasksPanel() {
@@ -104,114 +57,248 @@ function createTasksPanel() {
 
     tasksPanel.innerHTML = `
         <div class="tasks-panel-header">
-            <h3>📋 Tasks</h3>
-            <div class="tasks-panel-actions">
-                <button id="tasksExportBtn" title="Export to file">📤 Export</button>
-                <button id="tasksImportBtn" title="Import from file">📥 Import</button>
-                <input type="file" id="tasksImportInput" accept=".txt,.md" style="display:none">
+            <h3>📋 Tasks <span class="tasks-count">(${tasks.length})</span></h3>
+            <div class="tasks-header-actions">
+                <button id="tasksShowCompletedBtn" title="Show completed">✓ ${completedTasks.length}</button>
+                <button id="tasksSortBtn" title="Sort by date">↕️ Sort</button>
                 <button id="tasksCloseBtn" class="close-btn" title="Close">&times;</button>
             </div>
         </div>
-        <textarea id="tasksTextarea" placeholder="Write your tasks here..." spellcheck="false"></textarea>
+        <div class="tasks-add-row">
+            <input type="text" id="addTaskInput" placeholder="New task..." spellcheck="false">
+            <button id="addTaskBtn">+ Add</button>
+        </div>
+        <div id="tasksContainer" class="tasks-container"></div>
     `;
 
     app.appendChild(tasksPanel);
 
-    // Re-query elements after injection
-    tasksTextarea = document.getElementById('tasksTextarea');
-    tasksCloseBtn = document.getElementById('tasksCloseBtn');
-    tasksExportBtn = document.getElementById('tasksExportBtn');
-    tasksImportBtn = document.getElementById('tasksImportBtn');
+    const addTaskBtn = document.getElementById('addTaskBtn');
+    const input = document.getElementById('addTaskInput');
+    const sortBtn = document.getElementById('tasksSortBtn');
+    const closeBtn = document.getElementById('tasksCloseBtn');
+    const showCompletedBtn = document.getElementById('tasksShowCompletedBtn');
 
-    // Re-bind events for dynamically created elements
-    tasksCloseBtn.addEventListener('click', () => {
-        tasksPanel.style.display = 'none';
+    addTaskBtn.addEventListener('click', () => addTask(input.value));
+    input.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') addTask(input.value);
     });
-
-    tasksExportBtn.addEventListener('click', () => {
-        downloadTasksFile();
+    sortBtn.addEventListener('click', () => {
+        tasks.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+        saveTasks();
+        renderTasks();
     });
-
-    tasksImportBtn.addEventListener('click', () => {
-        const input = document.getElementById('tasksImportInput');
-        if (input) input.click();
+    showCompletedBtn.addEventListener('click', () => {
+        showCompleted = !showCompleted;
+        showCompletedBtn.textContent = showCompleted ? `← Back (${tasks.length})` : `✓ ${completedTasks.length}`;
+        renderTasks();
     });
+    // Close handled in initTasks
+}
 
-    const fileInput = document.getElementById('tasksImportInput');
-    if (fileInput) {
-        fileInput.addEventListener('change', (e) => {
-            const file = e.target.files[0];
-            if (!file) return;
-            const reader = new FileReader();
-            reader.onload = (ev) => {
-                tasksTextarea.value = ev.target.result;
-                saveTasks();
-                fileInput.value = '';
-            };
-            reader.readAsText(file);
-        });
+function addTask(text) {
+    if (!text.trim()) return;
+
+    const task = {
+        id: Date.now(),
+        text: text.trim(),
+        createdAt: new Date().toISOString()
+    };
+
+    tasks.push(task);
+    saveTasks();
+    renderTasks();
+
+    const input = document.getElementById('addTaskInput');
+    if (input) input.value = '';
+}
+
+function isEditable(task) {
+    const age = Date.now() - new Date(task.createdAt).getTime();
+    return age < EDIT_TIMEOUT_MS;
+}
+
+function editTask(id) {
+    const task = tasks.find(t => t.id === id);
+    if (!task || !isEditable(task)) return;
+
+    const cell = document.querySelector(`.task-cell[data-id="${id}"] .task-cell-content`);
+    if (!cell) return;
+
+    const currentText = task.text;
+    cell.innerHTML = `<input type="text" class="task-edit-input" value="${escapeHtml(currentText)}">`;
+    
+    const input = cell.querySelector('.task-edit-input');
+    input.focus();
+    input.setSelectionRange(input.value.length, input.value.length);
+
+    const saveEdit = () => {
+        const newText = input.value.trim();
+        if (newText && newText !== currentText) {
+            task.text = newText;
+            saveTasks();
+        }
+        renderTasks();
+    };
+
+    input.addEventListener('blur', saveEdit);
+    input.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            input.blur();
+        }
+        if (e.key === 'Escape') {
+            input.value = currentText;
+            input.blur();
+        }
+    });
+}
+
+function deleteTask(id) {
+    tasks = tasks.filter(t => t.id !== id);
+    saveTasks();
+    renderTasks();
+}
+
+function completeTask(id) {
+    const task = tasks.find(t => t.id === id);
+    if (!task) return;
+    
+    completedTasks.push({
+        ...task,
+        completedAt: new Date().toISOString()
+    });
+    tasks = tasks.filter(t => t.id !== id);
+    saveTasks();
+    saveCompletedTasks();
+    renderTasks();
+}
+
+function formatDate(isoString) {
+    const date = new Date(isoString);
+    const now = new Date();
+    const diff = now - date;
+
+    if (diff < 60000) return 'just now';
+    if (diff < 3600000) return `${Math.floor(diff / 60000)}m ago`;
+    if (diff < 86400000) return `${Math.floor(diff / 3600000)}h ago`;
+    if (diff < 604800000) return `${Math.floor(diff / 86400000)}d ago`;
+
+    return date.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' });
+}
+
+function renderTasks() {
+    const container = document.getElementById('tasksContainer');
+    if (!container) return;
+
+    // Update header count
+    const countSpan = tasksPanel.querySelector('.tasks-count');
+    if (countSpan) {
+        countSpan.textContent = showCompleted ? ` (${completedTasks.length} completed)` : `(${tasks.length})`;
     }
 
-    tasksTextarea.addEventListener('input', () => {
-        saveTasks();
-    });
+    const displayTasks = showCompleted ? completedTasks : tasks;
+
+    if (displayTasks.length === 0) {
+        container.innerHTML = `<div class="tasks-empty">${showCompleted ? 'No completed tasks yet' : 'No tasks yet'}</div>`;
+        return;
+    }
+
+    if (showCompleted) {
+        container.innerHTML = completedTasks.map(task => `
+            <div class="task-cell completed" data-id="${task.id}">
+                <div class="task-cell-header">
+                    <span class="task-date">${formatDate(task.createdAt)} → ${formatDate(task.completedAt)}</span>
+                    <button class="task-delete-btn" data-id="${task.id}" title="Delete">✕</button>
+                </div>
+                <div class="task-cell-content">${escapeHtml(task.text)}</div>
+            </div>
+        `).join('');
+        
+        container.querySelectorAll('.task-delete-btn').forEach(btn => {
+            btn.addEventListener('click', () => deleteCompletedTask(parseInt(btn.dataset.id)));
+        });
+    } else {
+        container.innerHTML = tasks.map(task => {
+            const editable = isEditable(task);
+            return `
+            <div class="task-cell" data-id="${task.id}">
+                <div class="task-cell-header">
+                    <span class="task-date">${formatDate(task.createdAt)}</span>
+                    ${editable ? '<span class="task-editable-hint">editable</span>' : ''}
+                    <button class="task-complete-btn" data-id="${task.id}" title="Complete">✓</button>
+                </div>
+                <div class="task-cell-content ${editable ? 'editable' : ''}">${escapeHtml(task.text)}</div>
+            </div>
+        `}).join('');
+
+        container.querySelectorAll('.task-cell-content.editable').forEach(el => {
+            el.addEventListener('click', () => {
+                const id = parseInt(el.closest('.task-cell').dataset.id);
+                editTask(id);
+            });
+        });
+
+        container.querySelectorAll('.task-complete-btn').forEach(btn => {
+            btn.addEventListener('click', () => completeTask(parseInt(btn.dataset.id)));
+        });
+    }
+}
+
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
 }
 
 function loadTasks() {
     try {
         const saved = localStorage.getItem(TASKS_STORAGE_KEY);
-        if (saved !== null) {
-            tasksTextarea.value = saved;
+        if (saved) {
+            tasks = JSON.parse(saved);
         } else {
-            // Попробуем загрузить с сервера
-            fetch('js/' + TASKS_FILE_NAME)
-                .then(r => r.ok ? r.text() : null)
-                .then(text => {
-                    if (text) {
-                        tasksTextarea.value = text;
-                        saveTasks();
-                    } else {
-                        tasksTextarea.value = '';
-                    }
-                })
-                .catch(() => {
-                    tasksTextarea.value = '';
-                });
+            tasks = [];
         }
+        loadCompletedTasks();
+        renderTasks();
     } catch (e) {
         console.error('Load tasks error:', e);
-        tasksTextarea.value = '';
+        tasks = [];
+        renderTasks();
     }
 }
 
 function saveTasks() {
     try {
-        localStorage.setItem(TASKS_STORAGE_KEY, tasksTextarea.value);
+        localStorage.setItem(TASKS_STORAGE_KEY, JSON.stringify(tasks));
     } catch (e) {
         console.error('Save tasks error:', e);
     }
 }
 
-function downloadTasksFile() {
-    const content = tasksTextarea.value;
-    const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = TASKS_FILE_NAME;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+function saveCompletedTasks() {
+    try {
+        localStorage.setItem(COMPLETED_TASKS_KEY, JSON.stringify(completedTasks));
+    } catch (e) {
+        console.error('Save completed tasks error:', e);
+    }
+}
+
+function loadCompletedTasks() {
+    try {
+        const saved = localStorage.getItem(COMPLETED_TASKS_KEY);
+        if (saved) {
+            completedTasks = JSON.parse(saved);
+        }
+    } catch (e) {
+        console.error('Load completed tasks error:', e);
+    }
 }
 
 export function getTasksContent() {
-    return tasksTextarea ? tasksTextarea.value : '';
+    return tasks.map(t => t.text).join('\n');
 }
 
 export function setTasksContent(content) {
-    if (tasksTextarea) {
-        tasksTextarea.value = content;
-        saveTasks();
-    }
+    // Not used in new format
 }
