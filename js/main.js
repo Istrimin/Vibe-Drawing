@@ -7,6 +7,8 @@ import { initCursors, setPipetteCursor, setPencilCursor, setEraserCursor, resetC
 import { getPathBoundingBox, doRectanglesIntersect, getCellsBetweenPoints } from './geometry.js';
 import { undo, redo, saveState, startPlayback, stopPlayback, pausePlayback, resumePlayback, setPlaybackSpeed, scrubToFrame, getPlaybackState, getHistoryLength } from './history.js';
 import { scaleBy2x } from './upscale.js';
+import { initTasks } from './tasks.js';
+import { setupExportPanel } from './export.js';
 
 // Throttled redraw using requestAnimationFrame to prevent excessive redraws
 let redrawScheduled = false;
@@ -78,6 +80,10 @@ function init() {
 
   setupEventListeners();
   setupUI();
+
+  // Initialize modules
+  initTasks();
+  setupExportPanel();
 
   updateStatusBar('Ready');
   updateColorIndicator();
@@ -503,79 +509,6 @@ function setupEventListeners() {
     });
   }
 
-  // Tasks dialog
-  if (elements.tasksBtn) {
-    elements.tasksBtn.addEventListener('click', () => {
-      elements.tasksDialog.classList.remove('hidden');
-      loadTasksFile();
-    });
-  }
-
-  if (elements.tasksCloseBtn) {
-    elements.tasksCloseBtn.addEventListener('click', () => {
-      elements.tasksDialog.classList.add('hidden');
-    });
-  }
-
-  if (elements.tasksLoadBtn) {
-    elements.tasksLoadBtn.addEventListener('click', () => {
-      elements.tasksFileInput.click();
-    });
-  }
-
-  if (elements.tasksFileInput) {
-    elements.tasksFileInput.addEventListener('change', (e) => {
-      const file = e.target.files[0];
-      if (!file) return;
-      const reader = new FileReader();
-      reader.onload = (ev) => {
-        elements.tasksTextarea.value = ev.target.result;
-        elements.tasksFileInput.value = '';
-      };
-      reader.readAsText(file);
-    });
-  }
-
-  if (elements.tasksSaveBtn) {
-    elements.tasksSaveBtn.addEventListener('click', () => {
-      const content = elements.tasksTextarea.value;
-      const blob = new Blob([content], { type: 'text/plain' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = 'сделать.txt';
-      a.click();
-      URL.revokeObjectURL(url);
-      updateStatusBar('Tasks file saved');
-    });
-  }
-
-  // Close tasks dialog when clicking outside
-  if (elements.tasksDialog) {
-    elements.tasksDialog.addEventListener('click', (e) => {
-      if (e.target === elements.tasksDialog) {
-        elements.tasksDialog.classList.add('hidden');
-      }
-    });
-  }
-
-  // Load tasks file helper
-  function loadTasksFile() {
-    // Try to fetch the file from the server if possible
-    fetch('js/сделать.txt')
-      .then(r => r.ok ? r.text() : null)
-      .then(text => {
-        if (text) {
-          elements.tasksTextarea.value = text;
-        } else {
-          elements.tasksTextarea.value = 'Click 📂 Load to open сделать.txt\n\nThen edit and click 💾 Save to download.';
-        }
-      })
-      .catch(() => {
-        elements.tasksTextarea.value = 'Click 📂 Load to open сделать.txt\n\nThen edit and click 💾 Save to download.';
-      });
-  }
-
   // Grid transformation mode button
   if (elements.gridTransformBtn) {
     elements.gridTransformBtn.addEventListener('click', () => {
@@ -657,6 +590,16 @@ function setupEventListeners() {
       updateStatusBar(`Tool: ${state.selectionTool}`);
     }
   });
+
+  // Export button
+  if (elements.exportBtn) {
+    elements.exportBtn.addEventListener('click', () => {
+      const exportPanel = document.getElementById('export-panel');
+      if (exportPanel) {
+        exportPanel.classList.toggle('hidden');
+      }
+    });
+  }
 
   // Mouse position
   elements.canvas.addEventListener('mousemove', (e) => {
@@ -748,6 +691,14 @@ function setupTimelineControls() {
     // Show timeline controls always
     timelineControls.style.display = 'flex';
     updateTimelineUI();
+
+    // Ensure play icon is visible initially
+    const playIcon = timelinePlayBtn?.querySelector('.play-icon');
+    const pauseIcons = timelinePlayBtn?.querySelectorAll('.pause-icon');
+    if (playIcon && pauseIcons?.length) {
+      playIcon.style.display = 'block';
+      pauseIcons.forEach(icon => { icon.style.display = 'none'; });
+    }
 
     // Play/Pause button
     timelinePlayBtn?.addEventListener('click', togglePlayback);
@@ -868,8 +819,18 @@ function togglePlayback() {
   // Update button state
   const timelinePlayBtn = document.getElementById('timelinePlayBtn');
   if (timelinePlayBtn) {
-    timelinePlayBtn.textContent = getPlaybackState().isPlaying ? '⏸' : '▶';
-    timelinePlayBtn.classList.toggle('playing', getPlaybackState().isPlaying);
+    const isPlaying = getPlaybackState().isPlaying;
+    timelinePlayBtn.classList.toggle('playing', isPlaying);
+
+    // Toggle play/pause icons
+    const playIcon = timelinePlayBtn.querySelector('.play-icon');
+    const pauseIcons = timelinePlayBtn.querySelectorAll('.pause-icon');
+    if (playIcon && pauseIcons.length) {
+      playIcon.style.display = isPlaying ? 'none' : 'block';
+      pauseIcons.forEach(icon => {
+        icon.style.display = isPlaying ? 'block' : 'none';
+      });
+    }
   }
   
   // Force UI update to ensure slider reflects current state
