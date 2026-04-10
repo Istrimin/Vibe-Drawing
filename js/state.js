@@ -133,4 +133,11 @@ export function initializeElements() {
   elements.tasksSaveBtn = document.getElementById('tasksSaveBtn');
   elements.tasksCloseBtn = document.getElementById('tasksCloseBtn');
   elements.tasksFileInput = document.getElementById('tasksFileInput');
+  elements.devToolsBtn = document.getElementById('devToolsBtn');
+  elements.changeCursorBtn = document.getElementById('changeCursorBtn');
+  elements.autoSaveBtn = document.getElementById('autoSaveBtn');
+  elements.autoSaveDialog = document.getElementById('autoSaveDialog');
+  elements.autoSaveCheckbox = document.getElementById('autoSaveCheckbox');
+  elements.autoSaveDialogClose = document.getElementById('autoSaveDialogClose');
+  elements.exportBtn = document.getElementById('exportBtn');
 }

@@ -311,6 +311,44 @@
                         <circle cx="12" cy="12" r="1" fill="white" opacity="0.6"/>
                     </svg>
                 </button>
+                <button class="tool-btn" id="devToolsBtn" data-tooltip="Dev Tools">
+                    <svg width="16" height="16" viewBox="0 0 24 24">
+                        <defs>
+                            <linearGradient id="devToolsGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                                <stop offset="0%" style="stop-color:#FF6B6B;stop-opacity:1" />
+                                <stop offset="100%" style="stop-color:#EE5A5A;stop-opacity:0.8" />
+                            </linearGradient>
+                        </defs>
+                        <path d="M8 3L4 12L8 21" fill="none" stroke="url(#devToolsGrad)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M16 3L20 12L16 21" fill="none" stroke="url(#devToolsGrad)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+                        <line x1="14" y1="4" x2="10" y2="20" stroke="url(#devToolsGrad)" stroke-width="2.2" stroke-linecap="round"/>
+                    </svg>
+                </button>
+                <button class="tool-btn" id="changeCursorBtn" data-tooltip="Change Cursor (C)">
+                    <svg width="16" height="16" viewBox="0 0 24 24">
+                        <defs>
+                            <linearGradient id="cursorGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                                <stop offset="0%" style="stop-color:#FFD700;stop-opacity:1" />
+                                <stop offset="100%" style="stop-color:#FFA500;stop-opacity:0.8" />
+                            </linearGradient>
+                        </defs>
+                        <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z" fill="url(#cursorGrad)" opacity="0.85"/>
+                        <circle cx="12" cy="12" r="2" fill="white" opacity="0.9"/>
+                    </svg>
+                </button>
+                <button class="tool-btn" id="autoSaveBtn" data-tooltip="Auto Save">
+                    <svg width="16" height="16" viewBox="0 0 24 24">
+                        <defs>
+                            <linearGradient id="autoSaveGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                                <stop offset="0%" style="stop-color:#4CAF50;stop-opacity:1" />
+                                <stop offset="100%" style="stop-color:#45a049;stop-opacity:0.8" />
+                            </linearGradient>
+                        </defs>
+                        <circle cx="12" cy="12" r="9" fill="none" stroke="url(#autoSaveGrad)" stroke-width="2" opacity="0.7"/>
+                        <path d="M12 7V12L15 15" fill="none" stroke="#4CAF50" stroke-width="2.2" stroke-linecap="round"/>
+                        <circle cx="12" cy="12" r="1.5" fill="#4CAF50" opacity="0.8"/>
+                    </svg>
+                </button>
                 <button class="tool-btn" id="zoomInBtn" data-tooltip="Zoom In (+)">
                     <svg width="16" height="16" viewBox="0 0 24 24">
                         <defs>
@@ -519,6 +557,21 @@
                     <button id="tasksCloseBtn" class="dialog-btn">Close</button>
                 </div>
                 <input type="file" id="tasksFileInput" accept=".txt,.md" style="display:none">
+            </div>
+        </div>
+    <div id="autoSaveDialog" class="dialog-overlay hidden">
+            <div class="dialog-content">
+                <h3>⏱️ Auto Save</h3>
+                <div class="dialog-option">
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="autoSaveCheckbox">
+                        Enable auto-save every minute
+                    </label>
+                    <p class="dialog-description">Automatically saves your project every 60 seconds</p>
+                </div>
+                <div class="dialog-buttons">
+                    <button id="autoSaveDialogClose" class="dialog-btn">Close</button>
+                </div>
             </div>
         </div>
     <script type="module" src="js/main.js" defer></script>
