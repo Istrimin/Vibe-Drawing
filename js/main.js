@@ -1,5 +1,5 @@
 import { state, elements, initializeElements } from './state.js';
-import { redrawCanvas, setupCanvas, zoom, clearCanvas } from './canvas.js';
+import { redrawCanvas, setupCanvas, zoom, clearCanvas, invalidateGridCellsCache, addToSpatialHash, rebuildSpatialHash } from './canvas.js';
 import { updateActiveTool, updateStatusBar, toggleGrid, showDevTools } from './ui.js';
 
 import { floodFill } from './fill.js';
@@ -20,10 +20,43 @@ function scheduleRedraw() {
   }
 }
 
-// Grid cells lookup Set for O(1) performance
+// Grid cells lookup Set/Map for O(1) performance
 function getGridCellKey(x, y) { return x + "," + y; }
 function buildGridCellsSet() {
   state._gridCellsSet = new Set(state.gridCells.map(cell => getGridCellKey(cell.x, cell.y)));
+  // Also build a Map for O(1) cell retrieval
+  state._gridCellsMap = new Map();
+  for (const cell of state.gridCells) {
+    const key = getGridCellKey(cell.x, cell.y);
+    state._gridCellsMap.set(key, cell);
+  }
+  // Invalidate cache and rebuild spatial hash
+  invalidateGridCellsCache();
+}
+function getCellByCoords(x, y) {
+  if (!state._gridCellsMap) {
+    state._gridCellsMap = new Map();
+    for (const cell of state.gridCells) {
+      state._gridCellsMap.set(getGridCellKey(cell.x, cell.y), cell);
+    }
+  }
+  return state._gridCellsMap.get(getGridCellKey(x, y));
+}
+function updateCellColor(x, y, color) {
+  const key = getGridCellKey(x, y);
+  if (!state._gridCellsMap) {
+    state._gridCellsMap = new Map();
+  }
+  let cell = state._gridCellsMap.get(key);
+  if (cell) {
+    cell.color = color;
+  } else {
+    cell = { x, y, color };
+    state._gridCellsMap.set(key, cell);
+    state._gridCellsSet.add(key);
+    state.gridCells.push(cell);
+  }
+  return cell;
 }
 
 // --- Functions that were in script.js ---
@@ -156,6 +189,7 @@ function setupEventListeners() {
     deleteBtn.addEventListener('click', () => {
       localStorage.removeItem('vibeDrawingState');
       state.gridCells = [];
+      invalidateGridCellsCache();
       state.images = [];
       state.drawingPaths = [];
       state.selectedObjects = [];
@@ -736,6 +770,7 @@ function updateCursorForTool(tool) {
 // Clear all canvas content (grid cells, images, paths) but don't delete saved state
 function clearAllContent() {
   state.gridCells = [];
+  invalidateGridCellsCache();
   state.images = [];
   state.drawingPaths = [];
   state.currentPath = [];
@@ -777,6 +812,7 @@ function setupTimelineControls() {
         state.images = [];
         state.drawingPaths = [];
         state.gridCells = [];
+        invalidateGridCellsCache();
         state.selectedImage = null;
         state.selectedObjects = [];
         state.zoomLevel = 1;
@@ -787,6 +823,7 @@ function setupTimelineControls() {
           state.images = JSON.parse(JSON.stringify(frameState.images));
           state.drawingPaths = JSON.parse(JSON.stringify(frameState.drawingPaths));
           state.gridCells = JSON.parse(JSON.stringify(frameState.gridCells));
+          invalidateGridCellsCache();
           state.selectedImage = frameState.selectedImage;
           state.selectedObjects = JSON.parse(JSON.stringify(frameState.selectedObjects));
           state.zoomLevel = frameState.zoomLevel;
@@ -975,14 +1012,15 @@ function handleCanvasMouseDown(e) {
               const symmetric = state.symmetry.transformGridCells([{ x: cellX, y: cellY, color: state.drawingColor }], state.gridSize);
               symmetric.shift(); // remove original
               for (const s of symmetric) {
-                const symCell = state.gridCells.find(cc => cc.x === s.x && cc.y === s.y);
-                if (symCell) symCell.color = state.drawingColor;
+                updateCellColor(s.x, s.y, state.drawingColor);
               }
             }
           } else {
             const newCell = { x: cellX, y: cellY, color: state.drawingColor };
             state._gridCellsSet.add(cellKey);
             state.gridCells.push(newCell);
+            if (state._gridCellsMap) state._gridCellsMap.set(cellKey, newCell);
+            addToSpatialHash(cellX, cellY, newCell);
             if (state.symmetry.isActive()) {
               const symmetric = state.symmetry.transformGridCells([newCell], state.gridSize);
               symmetric.shift();
@@ -991,6 +1029,8 @@ function handleCanvasMouseDown(e) {
                 if (!state._gridCellsSet.has(sKey)) {
                   state._gridCellsSet.add(sKey);
                   state.gridCells.push(s);
+                  if (state._gridCellsMap) state._gridCellsMap.set(sKey, s);
+                  addToSpatialHash(s.x, s.y, s);
                 }
               }
             }
@@ -1004,31 +1044,37 @@ function handleCanvasMouseDown(e) {
       const centerY = state.lastGridCell.y;
 
       // Erase cells
+      const keysToRemove = new Set();
       for (let dx = -halfSize; dx <= halfSize; dx++) {
         for (let dy = -halfSize; dy <= halfSize; dy++) {
           const cellX = centerX + dx * state.gridSize;
           const cellY = centerY + dy * state.gridSize;
-          // Remove the cell and its symmetric counterparts if symmetry is active
+          
           if (state.symmetry.isActive()) {
             const cellsToRemove = state.symmetry.transformGridCells([{ x: cellX, y: cellY, color: '' }], state.gridSize);
-            const toRemoveSet = new Set(cellsToRemove.map(cr => getGridCellKey(cr.x, cr.y)));
-            state.gridCells = state.gridCells.filter(cell => {
-              const k = getGridCellKey(cell.x, cell.y);
-              if (toRemoveSet.has(k)) {
-                state._gridCellsSet.delete(k);
-                return false;
-              }
-              return true;
-            });
+            for (const cr of cellsToRemove) {
+              keysToRemove.add(getGridCellKey(cr.x, cr.y));
+            }
           } else {
-            const key = getGridCellKey(cellX, cellY);
-            state._gridCellsSet.delete(key);
-            state.gridCells = state.gridCells.filter(cell => getGridCellKey(cell.x, cell.y) !== key);
+            keysToRemove.add(getGridCellKey(cellX, cellY));
           }
         }
       }
+      
+      if (keysToRemove.size > 0) {
+        state.gridCells = state.gridCells.filter(cell => {
+          const k = getGridCellKey(cell.x, cell.y);
+          if (keysToRemove.has(k)) {
+            state._gridCellsSet.delete(k);
+            if (state._gridCellsMap) state._gridCellsMap.delete(k);
+            return false;
+          }
+          return true;
+        });
+      }
     }
 
+    invalidateGridCellsCache();
     redrawCanvas();
     return;
   }
@@ -1195,22 +1241,25 @@ function handleCanvasMouseMove(e) {
                         // Fast Set-based lookup
                         const cellKey = getGridCellKey(filledX, filledY);
                         if (state._gridCellsSet.has(cellKey)) {
-                          // Update color of existing cell
-                          const existingCell = state.gridCells.find(cc => cc.x === filledX && cc.y === filledY);
-                          if (existingCell) existingCell.color = state.drawingColor;
+                          // Update color of existing cell - O(1) instead of O(n)
+                          updateCellColor(filledX, filledY, state.drawingColor);
                           // When symmetry is active, also update symmetric counterparts
                           if (state.symmetry.isActive()) {
                             const symmetric = state.symmetry.transformGridCells([{ x: filledX, y: filledY, color: state.drawingColor }], state.gridSize);
                             symmetric.shift(); // remove original
                             for (const s of symmetric) {
-                              const symCell = state.gridCells.find(cc => cc.x === s.x && cc.y === s.y);
-                              if (symCell) symCell.color = state.drawingColor;
+                              updateCellColor(s.x, s.y, state.drawingColor);
                             }
                           }
                         } else {
                           const newCell = { x: filledX, y: filledY, color: state.drawingColor };
                           state._gridCellsSet.add(cellKey);
                           state.gridCells.push(newCell);
+                          // Update Map cache
+                          if (state._gridCellsMap) {
+                            state._gridCellsMap.set(cellKey, newCell);
+                          }
+                          addToSpatialHash(filledX, filledY, newCell);
                           // Add symmetric cells with fast lookup
                           if (state.symmetry.isActive()) {
                             const symmetric = state.symmetry.transformGridCells([newCell], state.gridSize);
@@ -1220,6 +1269,10 @@ function handleCanvasMouseMove(e) {
                               if (!state._gridCellsSet.has(sKey)) {
                                 state._gridCellsSet.add(sKey);
                                 state.gridCells.push(s);
+                                if (state._gridCellsMap) {
+                                  state._gridCellsMap.set(sKey, s);
+                                }
+                                addToSpatialHash(s.x, s.y, s);
                               }
                             }
                           }
@@ -1232,28 +1285,40 @@ function handleCanvasMouseMove(e) {
                     const halfSize = Math.floor(eraserSize / 2);
                     const centerX = cell.x;
                     const centerY = cell.y;
+                    
+                    // Collect all keys to remove (including symmetric)
+                    const keysToRemove = new Set();
                     for (let dx = -halfSize; dx <= halfSize; dx++) {
                       for (let dy = -halfSize; dy <= halfSize; dy++) {
                         const erasedX = centerX + dx * state.gridSize;
                         const erasedY = centerY + dy * state.gridSize;
-                        // Remove the cell and its symmetric counterparts if symmetry is active
+                        
                         if (state.symmetry.isActive()) {
                           const cellsToRemove = state.symmetry.transformGridCells([{ x: erasedX, y: erasedY, color: '' }], state.gridSize);
-                          const toRemoveSet = new Set(cellsToRemove.map(cr => getGridCellKey(cr.x, cr.y)));
-                          state.gridCells = state.gridCells.filter(cell => {
-                            const k = getGridCellKey(cell.x, cell.y);
-                            if (toRemoveSet.has(k)) {
-                              state._gridCellsSet.delete(k);
-                              return false;
-                            }
-                            return true;
-                          });
+                          for (const cr of cellsToRemove) {
+                            keysToRemove.add(getGridCellKey(cr.x, cr.y));
+                          }
                         } else {
-                          const key = getGridCellKey(erasedX, erasedY);
-                          state._gridCellsSet.delete(key);
-                          state.gridCells = state.gridCells.filter(cell => getGridCellKey(cell.x, cell.y) !== key);
+                          keysToRemove.add(getGridCellKey(erasedX, erasedY));
                         }
                       }
+                    }
+                    
+                    // Remove cells in single pass
+                    if (keysToRemove.size > 0) {
+                      state.gridCells = state.gridCells.filter(cell => {
+                        const k = getGridCellKey(cell.x, cell.y);
+                        if (keysToRemove.has(k)) {
+                          state._gridCellsSet.delete(k);
+                          if (state._gridCellsMap) {
+                            state._gridCellsMap.delete(k);
+                          }
+                          return false;
+                        }
+                        return true;
+                      });
+                      // Rebuild spatial hash after removal
+                      rebuildSpatialHash();
                     }
                 }
             }
@@ -1261,6 +1326,7 @@ function handleCanvasMouseMove(e) {
             // Update last cell to the current cell
             state.lastGridCell = { x: Math.floor(pos.x / state.gridSize) * state.gridSize, y: Math.floor(pos.y / state.gridSize) * state.gridSize };
             state.lastGridMousePos = { x: pos.x, y: pos.y };
+            invalidateGridCellsCache();
             scheduleRedraw();
         }
         return;
@@ -1520,6 +1586,7 @@ function handleKeyDown(e) {
       }
     });
 
+    invalidateGridCellsCache();
     state.selectedObjects = [];
     redrawCanvas();
     updateStatusBar('Selected objects deleted');

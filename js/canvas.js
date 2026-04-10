@@ -3,8 +3,140 @@ import { state } from './state.js';
 /**
  * Canvas Module - Handles canvas setup, resizing, and rendering
  */
-// Cache for loaded images
+
+// Cache for loaded images
 const imageCache = new Map();
+
+// Offscreen canvas for grid cells caching
+let gridCellsCache = null;
+let gridCellsCacheVersion = 0;
+let gridCellsLastDrawnCount = 0;
+let gridCellsCacheBounds = { minX: 0, minY: 0, maxX: 0, maxY: 0 };
+
+// Spatial Hash Grid for fast visible cell queries
+const SPATIAL_CELL_SIZE = 200;
+
+function invalidateGridCellsCache() {
+  gridCellsCacheVersion++;
+}
+
+function getRegionKey(x, y) {
+  const rx = Math.floor(x / SPATIAL_CELL_SIZE);
+  const ry = Math.floor(y / SPATIAL_CELL_SIZE);
+  return rx + ',' + ry;
+}
+
+function rebuildSpatialHash() {
+  if (!state.gridCells || state.gridCells.length === 0) {
+    state._spatialHash = null;
+    return;
+  }
+
+  state._spatialHash = new Map();
+  for (let i = 0; i < state.gridCells.length; i++) {
+    const cell = state.gridCells[i];
+    const key = getRegionKey(cell.x, cell.y);
+    if (!state._spatialHash.has(key)) {
+      state._spatialHash.set(key, []);
+    }
+    state._spatialHash.get(key).push(cell); // Store cell reference, not index
+  }
+}
+
+function getVisibleCells(visStartX, visStartY, visEndX, visEndY) {
+  if (!state._spatialHash) return state.gridCells;
+
+  const visibleCells = [];
+  const startRx = Math.floor(visStartX / SPATIAL_CELL_SIZE);
+  const endRx = Math.floor(visEndX / SPATIAL_CELL_SIZE);
+  const startRy = Math.floor(visStartY / SPATIAL_CELL_SIZE);
+  const endRy = Math.floor(visEndY / SPATIAL_CELL_SIZE);
+
+  for (let rx = startRx; rx <= endRx; rx++) {
+    for (let ry = startRy; ry <= endRy; ry++) {
+      const key = rx + ',' + ry;
+      const region = state._spatialHash.get(key);
+      if (region) {
+        for (let i = 0; i < region.length; i++) {
+          visibleCells.push(region[i]);
+        }
+      }
+    }
+  }
+  return visibleCells;
+}
+
+function addToSpatialHash(x, y, cell) {
+  if (!state._spatialHash) {
+    rebuildSpatialHash();
+    return;
+  }
+  const key = getRegionKey(x, y);
+  if (!state._spatialHash.has(key)) {
+    state._spatialHash.set(key, []);
+  }
+  state._spatialHash.get(key).push(cell);
+}
+
+function removeCellFromSpatialHash(x, y, cellIndex) {
+  // Not needed anymore - we store cell references, not indices
+  // Spatial hash will be rebuilt after removal via rebuildSpatialHash()
+}
+
+function renderGridCellsToCache() {
+  if (state.gridCells.length === 0) {
+    gridCellsCache = null;
+    gridCellsLastDrawnCount = 0;
+    gridCellsCacheBounds = { minX: 0, minY: 0, maxX: 0, maxY: 0 };
+    return;
+  }
+
+  // Calculate bounds
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+  for (let i = 0; i < state.gridCells.length; i++) {
+    const cell = state.gridCells[i];
+    if (cell.x < minX) minX = cell.x;
+    if (cell.y < minY) minY = cell.y;
+    if (cell.x + state.gridSize > maxX) maxX = cell.x + state.gridSize;
+    if (cell.y + state.gridSize > maxY) maxY = cell.y + state.gridSize;
+  }
+
+  const padding = state.gridSize * 2;
+  const width = maxX - minX + padding * 2;
+  const height = maxY - minY + padding * 2;
+
+  if (!gridCellsCache || gridCellsCache.width !== width || gridCellsCache.height !== height) {
+    gridCellsCache = document.createElement('canvas');
+    gridCellsCache.width = width;
+    gridCellsCache.height = height;
+  }
+
+  const ctx = gridCellsCache.getContext('2d');
+  ctx.clearRect(0, 0, width, height);
+  ctx.save();
+  ctx.translate(-minX + padding, -minY + padding);
+
+  // Color batching
+  const cellsByColor = new Map();
+  for (let i = 0; i < state.gridCells.length; i++) {
+    const cell = state.gridCells[i];
+    if (!cellsByColor.has(cell.color)) cellsByColor.set(cell.color, []);
+    cellsByColor.get(cell.color).push(cell);
+  }
+
+  for (const [color, cells] of cellsByColor) {
+    ctx.fillStyle = color;
+    for (let j = 0; j < cells.length; j++) {
+      ctx.fillRect(cells[j].x, cells[j].y, state.gridSize, state.gridSize);
+    }
+  }
+
+  ctx.restore();
+  gridCellsCache._offsetX = minX - padding;
+  gridCellsCache._offsetY = minY - padding;
+  gridCellsCacheBounds = { minX, minY, maxX, maxY };
+  gridCellsLastDrawnCount = state.gridCells.length;
+}
 
 function getCachedImage(imgData) {
   if (!imageCache.has(imgData.src)) {
@@ -96,9 +228,10 @@ function drawGrid() {
 // Zoom functionality
 function zoom(factor) {
   const oldZoom = state.zoomLevel;
- state.zoomLevel = Math.max(1e-6, state.zoomLevel * factor); // Removed upper limit, kept very small lower limit
+  // Set reasonable zoom limits: 0.01% to 10000%
+  state.zoomLevel = Math.min(100, Math.max(1e-4, state.zoomLevel * factor));
 
- // Adjust pan offset to zoom around center
+  // Adjust pan offset to zoom around center
   const rect = state.canvas.getBoundingClientRect();
   const centerX = rect.width / 2;
   const centerY = rect.height / 2;
@@ -182,16 +315,27 @@ function redrawCanvas() {
     state.ctx.stroke();
   }
 
-  // Draw grid cells (optimized: visible area culling + color batching)
+  // Draw grid cells - DIRECT rendering with spatial hash culling + batching
   const gs = state.gridSize;
   const visStartX = -state.panOffset.x / state.zoomLevel;
   const visStartY = -state.panOffset.y / state.zoomLevel;
   const visEndX = visStartX + state.canvas.width / state.zoomLevel;
   const visEndY = visStartY + state.canvas.height / state.zoomLevel;
 
+  // Use spatial hash to get only visible cells (if available)
+  let visibleCells;
+  if (state._spatialHash) {
+    visibleCells = getVisibleCells(visStartX, visStartY, visEndX, visEndY);
+  } else {
+    // Fallback: use all cells
+    visibleCells = state.gridCells;
+  }
+
+  // Only visible cells with color batching
   const cellsByColor = new Map();
-  for (let i = 0; i < state.gridCells.length; i++) {
-    const cell = state.gridCells[i];
+  for (let i = 0; i < visibleCells.length; i++) {
+    const cell = visibleCells[i];
+    // Extra culling for cells at region borders
     if (cell.x + gs < visStartX || cell.x > visEndX || cell.y + gs < visStartY || cell.y > visEndY) continue;
     if (!cellsByColor.has(cell.color)) cellsByColor.set(cell.color, []);
     cellsByColor.get(cell.color).push(cell);
@@ -324,5 +468,9 @@ export {
   redrawCanvas,
   getCanvasState,
   setCanvasState,
-  drawSymmetryLines
+  drawSymmetryLines,
+  invalidateGridCellsCache,
+  addToSpatialHash,
+  rebuildSpatialHash,
+  removeCellFromSpatialHash
 };
