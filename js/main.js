@@ -955,8 +955,18 @@ function handleCanvasMouseDown(e) {
           const cellY = centerY + dy * state.gridSize;
           const cellKey = getGridCellKey(cellX, cellY);
           if (state._gridCellsSet.has(cellKey)) {
+            // Update color of existing cell
             const existingCell = state.gridCells.find(cc => cc.x === cellX && cc.y === cellY);
             if (existingCell) existingCell.color = state.drawingColor;
+            // When symmetry is active, also update symmetric counterparts
+            if (state.symmetry.isActive()) {
+              const symmetric = state.symmetry.transformGridCells([{ x: cellX, y: cellY, color: state.drawingColor }], state.gridSize);
+              symmetric.shift(); // remove original
+              for (const s of symmetric) {
+                const symCell = state.gridCells.find(cc => cc.x === s.x && cc.y === s.y);
+                if (symCell) symCell.color = state.drawingColor;
+              }
+            }
           } else {
             const newCell = { x: cellX, y: cellY, color: state.drawingColor };
             state._gridCellsSet.add(cellKey);
@@ -1173,8 +1183,18 @@ function handleCanvasMouseMove(e) {
                         // Fast Set-based lookup
                         const cellKey = getGridCellKey(filledX, filledY);
                         if (state._gridCellsSet.has(cellKey)) {
+                          // Update color of existing cell
                           const existingCell = state.gridCells.find(cc => cc.x === filledX && cc.y === filledY);
                           if (existingCell) existingCell.color = state.drawingColor;
+                          // When symmetry is active, also update symmetric counterparts
+                          if (state.symmetry.isActive()) {
+                            const symmetric = state.symmetry.transformGridCells([{ x: filledX, y: filledY, color: state.drawingColor }], state.gridSize);
+                            symmetric.shift(); // remove original
+                            for (const s of symmetric) {
+                              const symCell = state.gridCells.find(cc => cc.x === s.x && cc.y === s.y);
+                              if (symCell) symCell.color = state.drawingColor;
+                            }
+                          }
                         } else {
                           const newCell = { x: filledX, y: filledY, color: state.drawingColor };
                           state._gridCellsSet.add(cellKey);
