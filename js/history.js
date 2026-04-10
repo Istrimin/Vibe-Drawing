@@ -20,6 +20,7 @@ export function saveState() {
         zoomLevel: state.zoomLevel,
         panOffset: { ...state.panOffset },
         selectionTool: state.selectionTool,
+        showSymmetryLine: state.showSymmetryLine,
         // Add other state properties that should be saved
     };
     

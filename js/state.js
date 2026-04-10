@@ -46,6 +46,8 @@ export const state = {
   isGhostVisible: false,
   gridTransformationMode: 'permanent', // 'permanent' or 'visual-only'
   showSymmetryLine: true,
+  autoSaveEnabled: false,
+  autoSaveInterval: null,
   isCopying: false,
   gridBrushSize: 1,
   gridEraserSize: 1,
@@ -54,7 +56,9 @@ export const state = {
   isPlaying: false,
   playbackSpeed: 1, // 0.25, 0.5, 1, 2, 4
   playbackInterval: null,
-  currentTimelineFrame: 0
+  currentTimelineFrame: 0,
+  // DOM Elements
+  showSymmetryLineCb: null
 };
 
 // DOM Elements - will be initialized after DOM is ready
@@ -88,8 +92,10 @@ export function initializeElements() {
   elements.eraserSizeValue = document.getElementById('eraserSizeValue');
   elements.gridBrushSizeSlider = document.getElementById('gridBrushSizeSlider');
   elements.gridBrushSizeValue = document.getElementById('gridBrushSizeValue');
-  elements.rightGridBrushSlider = document.getElementById('rightGridBrushSlider');
-  elements.rightGridBrushValue = document.getElementById('rightGridBrushValue');
+  elements.rightGridBrushSlider = null; // removed, use gridBrushSizeSlider instead
+  elements.rightGridBrushValue = null; // removed
+  elements.gridSizeInputTop = document.getElementById('gridSizeInputTop');
+  elements.gridSizeValueTop = document.getElementById('gridSizeValueTop');
   elements.upscaleBtn = document.getElementById('upscaleBtn');
   elements.modeToggleBtn = document.getElementById('modeToggleBtn');
   elements.symmetryBtn = document.getElementById('symmetryBtn');
@@ -113,4 +119,18 @@ export function initializeElements() {
   elements.timelineSlider = document.getElementById('timelineSlider');
   elements.timelineFrame = document.getElementById('timelineFrame');
   elements.timelineSpeedBtn = document.getElementById('timelineSpeedBtn');
+  elements.showSymmetryLineCb = document.getElementById('showSymmetryLineCb');
+  elements.saveBtnRight = document.getElementById('saveBtnRight');
+  elements.autoSaveBtn = document.getElementById('autoSaveBtn');
+  elements.autoSaveDialog = document.getElementById('autoSaveDialog');
+  elements.autoSaveCheckbox = document.getElementById('autoSaveCheckbox');
+  elements.autoSaveDialogClose = document.getElementById('autoSaveDialogClose');
+  elements.gridBtn = document.getElementById('gridBtn');
+  elements.tasksBtn = document.getElementById('tasksBtn');
+  elements.tasksDialog = document.getElementById('tasksDialog');
+  elements.tasksTextarea = document.getElementById('tasksTextarea');
+  elements.tasksLoadBtn = document.getElementById('tasksLoadBtn');
+  elements.tasksSaveBtn = document.getElementById('tasksSaveBtn');
+  elements.tasksCloseBtn = document.getElementById('tasksCloseBtn');
+  elements.tasksFileInput = document.getElementById('tasksFileInput');
 }

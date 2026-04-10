@@ -34,16 +34,15 @@ function drawGrid() {
   if (!state.showGrid || !state.ctx) return;
 
   state.ctx.save();
-  state.ctx.translate(state.panOffset.x, state.panOffset.y);
-  state.ctx.scale(state.zoomLevel, state.zoomLevel);
 
   state.ctx.strokeStyle = state.gridColor;
-  state.ctx.lineWidth = 0.5;
+  state.ctx.lineWidth = 0.5 / state.zoomLevel; // Adjust for zoom
 
-  // Use effective grid size (accounts for upscale)
-  const effectiveGridSize = state.gridSize * state.gridUpscale;
+  // Use effective grid size (accounts for upscale if defined)
+  const gridUpscale = state.gridUpscale || 1;
+  const effectiveGridSize = state.gridSize * gridUpscale;
 
-  // Calculate visible area
+  // Calculate visible area in world coordinates (already transformed by redrawCanvas)
   const visibleWidth = state.canvas.width / state.zoomLevel;
   const visibleHeight = state.canvas.height / state.zoomLevel;
   const startX = -state.panOffset.x / state.zoomLevel;
@@ -216,7 +215,11 @@ function setCanvasState(canvasState) {
 }
 
 function drawSymmetryLines() {
-  if (!state.symmetry.isActive() || !state.showSymmetryLine) return;
+  if (!state.showSymmetryLine) return;
+  // Always draw symmetry line based on current mode, even if 'off' show a vertical guide
+  const modeToDraw = state.symmetry.mode !== 'off' ? state.symmetry.mode : 'vertical';
+
+  console.log('[DEBUG drawSymmetryLines] showSymmetryLine:', state.showSymmetryLine, 'mode:', state.symmetry.mode, 'modeToDraw:', modeToDraw);
 
   const { ctx, canvas, zoomLevel, panOffset } = state;
 
@@ -229,11 +232,20 @@ function drawSymmetryLines() {
   const endY = startY + visibleHeight;
 
   ctx.save();
-  ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
+  
+  // Change color based on symmetry activation state
+  if (state.symmetry.isActive()) {
+    // Active symmetry - bright green
+    ctx.strokeStyle = 'rgba(0, 255, 127, 0.7)';
+  } else {
+    // Inactive (guide only) - dim white
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+  }
+  
   ctx.lineWidth = 1 / zoomLevel; // Keep line width consistent regardless of zoom
   ctx.setLineDash([5 / zoomLevel, 5 / zoomLevel]);
 
-  switch (state.symmetry.mode) {
+  switch (modeToDraw) {
     case 'vertical':
       ctx.beginPath();
       ctx.moveTo(0, startY);

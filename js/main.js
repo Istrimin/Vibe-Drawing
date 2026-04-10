@@ -63,6 +63,9 @@ function init() {
   // Hide/show tools based on initial mode
   updateToolsForMode();
 
+  // Initialize auto-save
+  updateAutoSave();
+
   redrawCanvas();
 }
 
@@ -81,7 +84,7 @@ function updateToolsForMode() {
   // Tools available in Normal mode
   const normalTools = ['pencil', 'select', 'eraser', 'pipette', 'fill', 'rect-select', 'lasso'];
   // Tools available in Grid mode  
-  const gridTools = ['grid-draw', 'rect-select', 'lasso', 'pipette', 'select'];
+  const gridTools = ['grid-draw', 'rect-select', 'lasso', 'pipette', 'fill', 'select'];
   
   const availableTools = state.drawingMode === 'grid' ? gridTools : normalTools;
   
@@ -119,10 +122,57 @@ function setupEventListeners() {
   elements.zoomInBtn.addEventListener('click', () => zoom(1.2));
   elements.zoomOutBtn.addEventListener('click', () => zoom(0.8));
   elements.zoomResetBtn.addEventListener('click', () => zoom(1));
-  elements.clearCanvasBtn.addEventListener('click', clearCanvas);
+  elements.clearCanvasBtn.addEventListener('click', clearAllContent);
   elements.saveBtn.addEventListener('click', saveProjectState);
+  if (elements.saveBtnRight) {
+    elements.saveBtnRight.addEventListener('click', saveProjectState);
+  }
   elements.loadBtn.addEventListener('click', loadState);
-  
+
+  // Delete button - remove saved state file
+  const deleteBtn = document.getElementById('deleteBtn');
+  if (deleteBtn) {
+    deleteBtn.addEventListener('click', () => {
+      localStorage.removeItem('vibeDrawingState');
+      state.gridCells = [];
+      state.images = [];
+      state.drawingPaths = [];
+      state.selectedObjects = [];
+      redrawCanvas();
+      updateStatusBar('Project deleted');
+    });
+  }
+
+  // Auto-save button
+  if (elements.autoSaveBtn) {
+    elements.autoSaveBtn.addEventListener('click', () => {
+      elements.autoSaveDialog.classList.remove('hidden');
+      // Load current state
+      elements.autoSaveCheckbox.checked = state.autoSaveEnabled;
+    });
+  }
+
+  // Auto-save dialog close
+  if (elements.autoSaveDialogClose) {
+    elements.autoSaveDialogClose.addEventListener('click', () => {
+      elements.autoSaveDialog.classList.add('hidden');
+      // Save the setting
+      state.autoSaveEnabled = elements.autoSaveCheckbox.checked;
+      updateAutoSave();
+    });
+  }
+
+  // Close dialog when clicking outside
+  if (elements.autoSaveDialog) {
+    elements.autoSaveDialog.addEventListener('click', (e) => {
+      if (e.target === elements.autoSaveDialog) {
+        elements.autoSaveDialog.classList.add('hidden');
+        state.autoSaveEnabled = elements.autoSaveCheckbox.checked;
+        updateAutoSave();
+      }
+    });
+  }
+
   // Fullscreen button
   const fullscreenBtn = document.getElementById('fullscreenBtn');
   if (fullscreenBtn) {
@@ -180,11 +230,9 @@ function setupEventListeners() {
     state.gridColor = e.target.value;
     redrawCanvas();
   });
-  elements.gridSizeInput.addEventListener('input', (e) => {
-    state.gridSize = parseInt(e.target.value, 10);
-    redrawCanvas();
-  });
-  
+  // gridSizeInput removed from right panel, use gridSizeInputTop in top toolbar instead
+  // (handler already set up in gridSizeInputTop listener above)
+
   // Make redrawCanvas available globally for history functions
   window.redrawCanvas = redrawCanvas;
   elements.backgroundColorPicker.addEventListener('input', (e) => {
@@ -209,23 +257,16 @@ function setupEventListeners() {
   elements.gridBrushSizeSlider.addEventListener('input', (e) => {
     state.gridBrushSize = parseInt(e.target.value, 10);
     elements.gridBrushSizeValue.textContent = e.target.value;
-    // Sync with right panel slider
-    if (elements.rightGridBrushSlider) {
-      elements.rightGridBrushSlider.value = e.target.value;
-      elements.rightGridBrushValue.textContent = e.target.value;
-    }
   });
 
-  // Right panel grid brush size slider
-  if (elements.rightGridBrushSlider) {
-    elements.rightGridBrushSlider.addEventListener('input', (e) => {
-      state.gridBrushSize = parseInt(e.target.value, 10);
-      elements.rightGridBrushValue.textContent = e.target.value;
-      // Sync with top panel slider
-      if (elements.gridBrushSizeSlider) {
-        elements.gridBrushSizeSlider.value = e.target.value;
-        elements.gridBrushSizeValue.textContent = e.target.value;
+  // Grid cell size slider (top panel)
+  if (elements.gridSizeInputTop) {
+    elements.gridSizeInputTop.addEventListener('input', (e) => {
+      state.gridSize = parseInt(e.target.value, 10);
+      if (elements.gridSizeValueTop) {
+        elements.gridSizeValueTop.textContent = e.target.value;
       }
+      redrawCanvas();
     });
   }
 
@@ -252,7 +293,8 @@ function setupEventListeners() {
       updateToolsForMode();
       if (state.previousTool) {
         state.selectionTool = state.previousTool;
-        updateActiveTool(state.previousTool);
+        const previousToolBtn = document.querySelector(`.tool-btn[data-tool="${state.previousTool}"]`);
+        if(previousToolBtn) updateActiveTool(previousToolBtn);
       }
       updateStatusBar('Mode: Normal');
     } else {
@@ -262,7 +304,8 @@ function setupEventListeners() {
       elements.app.classList.add('mode-grid');
       state.previousTool = state.selectionTool;
       state.selectionTool = 'grid-draw';
-      updateActiveTool('grid-draw');
+      const gridDrawBtn = document.querySelector('.tool-btn[data-tool="grid-draw"]');
+      if(gridDrawBtn) updateActiveTool(gridDrawBtn);
       state.showGrid = true;
       document.getElementById('gridBtn').setAttribute('data-active', 'true');
       document.getElementById('gridBtn').classList.add('active');
@@ -282,7 +325,8 @@ function setupEventListeners() {
         elements.app.classList.add('mode-grid');
         state.previousTool = state.selectionTool;
         state.selectionTool = 'grid-draw';
-        updateActiveTool('grid-draw');
+        const gridDrawBtn = document.querySelector('.tool-btn[data-tool="grid-draw"]');
+        if(gridDrawBtn) updateActiveTool(gridDrawBtn);
         state.showGrid = true;
         document.getElementById('gridBtn').setAttribute('data-active', 'true');
         document.getElementById('gridBtn').classList.add('active');
@@ -295,7 +339,8 @@ function setupEventListeners() {
         updateToolsForMode();
         if (state.previousTool) {
           state.selectionTool = state.previousTool;
-          updateActiveTool(state.previousTool);
+          const previousToolBtn = document.querySelector(`.tool-btn[data-tool="${state.previousTool}"]`);
+          if(previousToolBtn) updateActiveTool(previousToolBtn);
         }
         updateStatusBar('Mode: Normal');
       }
@@ -403,6 +448,13 @@ function setupEventListeners() {
 
         // Hide panel after selection
         elements.symmetryPanel.classList.add('hidden');
+
+        // Save state to persist symmetry mode across sessions
+        saveProjectState(true);
+
+        // Visual feedback
+        const modeLabel = mode === 'off' ? 'Guide only' : mode.charAt(0).toUpperCase() + mode.slice(1);
+        updateStatusBar(`Symmetry: ${modeLabel}`);
     });
   });
 
@@ -410,23 +462,115 @@ function setupEventListeners() {
   elements.radialRayCountInput.addEventListener('input', (e) => {
       const count = parseInt(e.target.value, 10);
       state.symmetry.setRays(count);
+      saveProjectState(true);
   });
 
+  // Listen to symmetry line visibility changes
+  if (elements.showSymmetryLineCb) {
+    elements.showSymmetryLineCb.addEventListener('change', (e) => {
+      state.showSymmetryLine = e.target.checked;
+      redrawCanvas();
+      saveProjectState(true);
+    });
+  }
+
+  // Grid button toggle - save state
+  if (elements.gridBtn) {
+    elements.gridBtn.addEventListener('click', () => {
+      saveProjectState(true);
+    });
+  }
+
+  // Tasks dialog
+  if (elements.tasksBtn) {
+    elements.tasksBtn.addEventListener('click', () => {
+      elements.tasksDialog.classList.remove('hidden');
+      loadTasksFile();
+    });
+  }
+
+  if (elements.tasksCloseBtn) {
+    elements.tasksCloseBtn.addEventListener('click', () => {
+      elements.tasksDialog.classList.add('hidden');
+    });
+  }
+
+  if (elements.tasksLoadBtn) {
+    elements.tasksLoadBtn.addEventListener('click', () => {
+      elements.tasksFileInput.click();
+    });
+  }
+
+  if (elements.tasksFileInput) {
+    elements.tasksFileInput.addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        elements.tasksTextarea.value = ev.target.result;
+        elements.tasksFileInput.value = '';
+      };
+      reader.readAsText(file);
+    });
+  }
+
+  if (elements.tasksSaveBtn) {
+    elements.tasksSaveBtn.addEventListener('click', () => {
+      const content = elements.tasksTextarea.value;
+      const blob = new Blob([content], { type: 'text/plain' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'сделать.txt';
+      a.click();
+      URL.revokeObjectURL(url);
+      updateStatusBar('Tasks file saved');
+    });
+  }
+
+  // Close tasks dialog when clicking outside
+  if (elements.tasksDialog) {
+    elements.tasksDialog.addEventListener('click', (e) => {
+      if (e.target === elements.tasksDialog) {
+        elements.tasksDialog.classList.add('hidden');
+      }
+    });
+  }
+
+  // Load tasks file helper
+  function loadTasksFile() {
+    // Try to fetch the file from the server if possible
+    fetch('js/сделать.txt')
+      .then(r => r.ok ? r.text() : null)
+      .then(text => {
+        if (text) {
+          elements.tasksTextarea.value = text;
+        } else {
+          elements.tasksTextarea.value = 'Click 📂 Load to open сделать.txt\n\nThen edit and click 💾 Save to download.';
+        }
+      })
+      .catch(() => {
+        elements.tasksTextarea.value = 'Click 📂 Load to open сделать.txt\n\nThen edit and click 💾 Save to download.';
+      });
+  }
+
   // Grid transformation mode button
-  elements.gridTransformBtn.addEventListener('click', () => {
-    if (state.gridTransformationMode === 'permanent') {
-      state.gridTransformationMode = 'visual-only';
-      elements.gridTransformBtn.setAttribute('data-mode', 'visual-only');
-      elements.gridTransformBtn.title = 'Grid Transformation: Visual Only (Grid type changes only affect view)';
-      updateStatusBar('Grid mode: Visual only (no permanent changes)');
-    } else {
-      state.gridTransformationMode = 'permanent';
-      elements.gridTransformBtn.setAttribute('data-mode', 'permanent');
-      elements.gridTransformBtn.title = 'Grid Transformation: Permanent (Grid type changes affect saved data)';
-      updateStatusBar('Grid mode: Permanent (saved with data)');
-    }
-    redrawCanvas();
- });
+  if (elements.gridTransformBtn) {
+    elements.gridTransformBtn.addEventListener('click', () => {
+      if (state.gridTransformationMode === 'permanent') {
+        state.gridTransformationMode = 'visual-only';
+        elements.gridTransformBtn.setAttribute('data-mode', 'visual-only');
+        elements.gridTransformBtn.title = 'Grid Transformation: Visual Only (Grid type changes only affect view)';
+        updateStatusBar('Grid mode: Visual only (no permanent changes)');
+      } else {
+        state.gridTransformationMode = 'permanent';
+        elements.gridTransformBtn.setAttribute('data-mode', 'permanent');
+        elements.gridTransformBtn.title = 'Grid Transformation: Permanent (Grid type changes affect saved data)';
+        updateStatusBar('Grid mode: Permanent (saved with data)');
+      }
+      redrawCanvas();
+    });
+  }
 
   // Dev tools
   const devToolsBtn = document.getElementById('devToolsBtn');
@@ -439,6 +583,9 @@ function setupEventListeners() {
     btn.addEventListener('click', () => {
       const tool = btn.dataset.tool;
       if (!tool) return;
+      if (btn.style.display === 'none') {
+        return;
+      }
 
       // Toggle grid-draw tool
       if (tool === 'grid-draw' && state.selectionTool === 'grid-draw') {
@@ -498,12 +645,20 @@ function setupEventListeners() {
 
 // Setup UI
 function setupUI() {
-  updateActiveTool(document.querySelector('.tool-btn.active'));
+  const activeToolBtn = document.querySelector('.tool-btn.active');
+  if(activeToolBtn) updateActiveTool(activeToolBtn);
 
-  // Initialize right panel grid brush slider
-  if (elements.rightGridBrushSlider) {
-    elements.rightGridBrushSlider.value = state.gridBrushSize;
-    elements.rightGridBrushValue.textContent = state.gridBrushSize;
+  // Initialize symmetry line checkbox
+  if (elements.showSymmetryLineCb) {
+    elements.showSymmetryLineCb.checked = state.showSymmetryLine;
+  }
+
+  // Initialize grid cell size slider
+  if (elements.gridSizeInputTop) {
+    elements.gridSizeInputTop.value = state.gridSize;
+    if (elements.gridSizeValueTop) {
+      elements.gridSizeValueTop.textContent = state.gridSize;
+    }
   }
 
   // Set initial cursor based on default tool (grid-draw is default)
@@ -544,6 +699,18 @@ function updateCursorForTool(tool) {
 }
 
 // --- TIMELINE FUNCTIONS ---
+
+// Clear all canvas content (grid cells, images, paths) but don't delete saved state
+function clearAllContent() {
+  state.gridCells = [];
+  state.images = [];
+  state.drawingPaths = [];
+  state.currentPath = [];
+  state.selectedObjects = [];
+  redrawCanvas();
+  updateStatusBar('Canvas cleared');
+}
+
 function setupTimelineControls() {
   // Delay initialization to ensure DOM is ready
   setTimeout(() => {
@@ -886,6 +1053,40 @@ function handleCanvasMouseDown(e) {
     return;
   }
 
+  // Select and Lasso tools
+  if (state.selectionTool === 'rect-select' || state.selectionTool === 'lasso') {
+    saveState();
+    state.isSelecting = true;
+    if (state.selectionTool === 'lasso') {
+        state.selectionPath = [pos];
+    } else {
+        state.selectionStart = pos;
+        state.selectionEnd = pos;
+    }
+    return;
+  }
+
+  // Select tool (arrow) - start moving selected objects
+  if (state.selectionTool === 'select' && state.selectedObjects.length > 0) {
+    const clickedOnSelection = state.selectedObjects.some(obj => {
+        let bbox;
+        if (obj.type === 'image') bbox = { minX: obj.obj.x, minY: obj.obj.y, maxX: obj.obj.x + obj.obj.width, maxY: obj.obj.y + obj.obj.height };
+        else if (obj.type === 'path') bbox = getPathBoundingBox(obj.obj);
+        else if (obj.type === 'grid-cell') bbox = { minX: obj.obj.x, minY: obj.obj.y, maxX: obj.obj.x + state.gridSize, maxY: obj.obj.y + state.gridSize };
+        return bbox && pos.x >= bbox.minX && pos.x <= bbox.maxX && pos.y >= bbox.minY && pos.y <= bbox.maxY;
+    });
+
+    if (clickedOnSelection) {
+        state.isMovingSelection = true;
+        state.dragStart = pos;
+        state.ghostOffset = { x: 0, y: 0 };
+        state.isGhostVisible = true;
+        elements.canvas.style.cursor = 'move';
+        saveState();
+        return;
+    }
+  }
+
   // Fallback to selection
   const clickedImage = getImageAtPosition(pos.x, pos.y);
   if (clickedImage) {
@@ -905,15 +1106,6 @@ function handleCanvasMouseDown(e) {
       state.dragStart = { x: pos.x - clickedImage.x, y: pos.y - clickedImage.y };
       // Save state BEFORE moving for proper undo
       saveState();
-    }
-  } else {
-    // Start a new selection
-    state.isSelecting = true;
-    if (state.selectionTool === 'lasso') {
-        state.selectionPath = [pos];
-    } else {
-        state.selectionStart = pos;
-        state.selectionEnd = pos;
     }
   }
 }
@@ -1022,12 +1214,10 @@ function handleCanvasMouseMove(e) {
     let snappedDy = dy;
 
     if (state.selectionTool === 'grid-draw' || state.showGrid) {
-      // Snap to grid by rounding to nearest grid size
       snappedDx = Math.round(dx / state.gridSize) * state.gridSize;
       snappedDy = Math.round(dy / state.gridSize) * state.gridSize;
     }
 
-    // Update ghost offset for visual preview instead of moving objects directly
     state.ghostOffset = { x: snappedDx, y: snappedDy };
     redrawCanvas();
     return;
@@ -1134,6 +1324,7 @@ function handleCanvasMouseUp(e) {
     state.currentPath = [];
     state.lastGridCell = { x: null, y: null }; // Reset last grid cell
   }
+
   if (state.isSelecting) {
     if (state.selectionTool === 'rect-select') {
         const selectionRect = {
@@ -1410,7 +1601,25 @@ function getMousePosition(e) {
 }
 
 // --- Persistence ---
-function saveProjectState() {
+function updateAutoSave() {
+  // Clear existing interval
+  if (state.autoSaveInterval) {
+    clearInterval(state.autoSaveInterval);
+    state.autoSaveInterval = null;
+  }
+
+  // Set new interval if enabled
+  if (state.autoSaveEnabled) {
+    state.autoSaveInterval = setInterval(() => {
+      saveProjectState(true); // silent save
+    }, 30000); // 30 seconds
+    updateStatusBar('Auto-save enabled (every 30s)');
+  } else {
+    updateStatusBar('Auto-save disabled');
+  }
+}
+
+function saveProjectState(silent = false) {
   // When symmetry is active, save the expanded grid cells to make them permanent
   let gridCellsToSave = state.gridCells;
   if (state.symmetry.isActive()) {
@@ -1429,12 +1638,17 @@ function saveProjectState() {
       mode: state.symmetry.mode,
       radialRays: state.symmetry.radialRays
     },
+    showSymmetryLine: state.showSymmetryLine, // Save symmetry line visibility
+    autoSaveEnabled: state.autoSaveEnabled, // Save auto-save setting
     // Save grid type and other grid settings
     gridType: 'square',
     gridTransformationMode: state.gridTransformationMode
   };
+  console.log('[DEBUG saveProjectState] Saving symmetry mode:', stateToSave.symmetry);
   localStorage.setItem('vibeDrawingState', JSON.stringify(stateToSave));
-  updateStatusBar('State saved');
+  if (!silent) {
+    updateStatusBar('State saved');
+  }
 }
 
 function loadState() {
@@ -1460,14 +1674,19 @@ function loadState() {
 
     // Restore symmetry state if it was saved
     if (parsedState.symmetry) {
+      console.log('[DEBUG loadState] Restoring symmetry:', parsedState.symmetry);
       state.symmetry.mode = parsedState.symmetry.mode || 'off';
       state.symmetry.radialRays = parsedState.symmetry.radialRays || 8;
+      console.log('[DEBUG loadState] Current mode:', state.symmetry.mode, 'isActive:', state.symmetry.isActive());
 
       // Update UI to reflect the loaded symmetry state
       const activeBtn = document.querySelector(`.symmetry-mode-btn[data-mode="${state.symmetry.mode}"]`);
       if (activeBtn) {
         document.querySelectorAll('.symmetry-mode-btn').forEach(btn => btn.classList.remove('active'));
         activeBtn.classList.add('active');
+        console.log('[DEBUG loadState] Activated button:', state.symmetry.mode);
+      } else {
+        console.log('[DEBUG loadState] Button NOT found for mode:', state.symmetry.mode);
       }
       if (state.symmetry.mode === 'radial') {
         document.getElementById('radial-ray-count').value = state.symmetry.radialRays;
@@ -1476,6 +1695,31 @@ function loadState() {
         document.getElementById('radial-ray-count-container').classList.add('hidden');
       }
       document.getElementById('symmetryBtn').classList.toggle('active', state.symmetry.isActive());
+    } else {
+      // Initialize symmetry UI to default (off)
+      const offBtn = document.querySelector('.symmetry-mode-btn[data-mode="off"]');
+      if (offBtn) {
+        document.querySelectorAll('.symmetry-mode-btn').forEach(btn => btn.classList.remove('active'));
+        offBtn.classList.add('active');
+      }
+      document.getElementById('radial-ray-count-container').classList.add('hidden');
+    }
+
+    // Restore showSymmetryLine if it was saved
+    if (parsedState.showSymmetryLine !== undefined) {
+      state.showSymmetryLine = parsedState.showSymmetryLine;
+      if (elements.showSymmetryLineCb) {
+        elements.showSymmetryLineCb.checked = state.showSymmetryLine;
+      }
+    }
+
+    // Restore auto-save setting if it was saved
+    if (parsedState.autoSaveEnabled !== undefined) {
+      state.autoSaveEnabled = parsedState.autoSaveEnabled;
+      if (elements.autoSaveCheckbox) {
+        elements.autoSaveCheckbox.checked = state.autoSaveEnabled;
+      }
+      updateAutoSave();
     }
 
     // Restore grid type if it was saved
