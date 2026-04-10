@@ -3,6 +3,17 @@ import { state } from './state.js';
 /**
  * Canvas Module - Handles canvas setup, resizing, and rendering
  */
+// Cache for loaded images
+const imageCache = new Map();
+
+function getCachedImage(imgData) {
+  if (!imageCache.has(imgData.src)) {
+    const imgElement = new Image();
+    imgElement.src = imgData.src;
+    imageCache.set(imgData.src, imgElement);
+  }
+  return imageCache.get(imgData.src);
+}
 
 // Initialize canvas
 function setupCanvas() {
@@ -170,25 +181,15 @@ function redrawCanvas() {
     state.ctx.fillRect(cell.x, cell.y, state.gridSize, state.gridSize);
   });
 
-  // Draw images
+  // Draw images (cached for performance)
   state.images.forEach(img => {
-    const imgElement = new Image();
-    imgElement.src = img.src;
-    // Since it's data URL, it should be instant, but to be safe
-    if (imgElement.complete) {
+    const imgElement = getCachedImage(img);
+    if (imgElement.complete && imgElement.naturalWidth > 0) {
       state.ctx.save();
       state.ctx.translate(img.x, img.y);
       state.ctx.rotate(img.rotation);
       state.ctx.drawImage(imgElement, -img.width / 2, -img.height / 2, img.width, img.height);
       state.ctx.restore();
-    } else {
-      imgElement.onload = () => {
-        state.ctx.save();
-        state.ctx.translate(img.x, img.y);
-        state.ctx.rotate(img.rotation);
-        state.ctx.drawImage(imgElement, -img.width / 2, -img.height / 2, img.width, img.height);
-        state.ctx.restore();
-      };
     }
   });
 

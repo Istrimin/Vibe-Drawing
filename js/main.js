@@ -1,5 +1,5 @@
 import { state, elements, initializeElements } from './state.js';
-import { setupCanvas, redrawCanvas, zoom, clearCanvas } from './canvas.js';
+import { redrawCanvas, setupCanvas, zoom, clearCanvas } from './canvas.js';
 import { updateActiveTool, updateStatusBar, toggleGrid, showDevTools } from './ui.js';
 
 import { floodFill } from './fill.js';
@@ -7,6 +7,18 @@ import { initCursors, setPipetteCursor, setPencilCursor, setEraserCursor, resetC
 import { getPathBoundingBox, doRectanglesIntersect, getCellsBetweenPoints } from './geometry.js';
 import { undo, redo, saveState, startPlayback, stopPlayback, pausePlayback, resumePlayback, setPlaybackSpeed, scrubToFrame, getPlaybackState, getHistoryLength } from './history.js';
 import { scaleBy2x } from './upscale.js';
+
+// Throttled redraw using requestAnimationFrame to prevent excessive redraws
+let redrawScheduled = false;
+function scheduleRedraw() {
+  if (!redrawScheduled) {
+    redrawScheduled = true;
+    requestAnimationFrame(() => {
+      redrawCanvas();
+      redrawScheduled = false;
+    });
+  }
+}
 
 // --- Functions that were in script.js ---
 
@@ -1188,7 +1200,7 @@ function handleCanvasMouseMove(e) {
             // Update last cell to the current cell
             state.lastGridCell = { x: Math.floor(pos.x / state.gridSize) * state.gridSize, y: Math.floor(pos.y / state.gridSize) * state.gridSize };
             state.lastGridMousePos = { x: pos.x, y: pos.y };
-            redrawCanvas();
+            scheduleRedraw();
         }
         return;
     }
@@ -1201,7 +1213,7 @@ function handleCanvasMouseMove(e) {
       size: isErasing ? state.eraserSize : state.drawingSize,
       color: isErasing ? state.backgroundColor : state.drawingColor
     });
-    redrawCanvas();
+    scheduleRedraw();
     return;
   }
 
@@ -1219,14 +1231,14 @@ function handleCanvasMouseMove(e) {
     }
 
     state.ghostOffset = { x: snappedDx, y: snappedDy };
-    redrawCanvas();
+    scheduleRedraw();
     return;
   }
 
   if (state.isDragging && state.selectedImage) {
     state.selectedImage.x = pos.x - state.dragStart.x;
     state.selectedImage.y = pos.y - state.dragStart.y;
-    redrawCanvas();
+    scheduleRedraw();
   } else if (state.isResizing && state.selectedImage) {
     const dx = pos.x - state.resizeStart.x;
     const dy = pos.y - state.resizeStart.y;
@@ -1238,27 +1250,27 @@ function handleCanvasMouseMove(e) {
       state.selectedImage.width = Math.max(20, state.resizeStart.width + dx);
       state.selectedImage.height = Math.max(20, state.resizeStart.height + dy);
     }
-    redrawCanvas();
+    scheduleRedraw();
   } else if (state.isRotating && state.selectedImage) {
     const centerX = state.selectedImage.x + state.selectedImage.width / 2;
     const centerY = state.selectedImage.y + state.selectedImage.height / 2;
     const angle = Math.atan2(pos.y - centerY, pos.x - centerX);
     state.selectedImage.rotation = angle;
-    redrawCanvas();
+    scheduleRedraw();
   } else if (state.isPanning) {
     const dx = e.clientX - state.panStart.x;
     const dy = e.clientY - state.panStart.y;
     state.panOffset.x += dx;
     state.panOffset.y += dy;
     state.panStart = { x: e.clientX, y: e.clientY };
-    redrawCanvas();
+    scheduleRedraw();
   } else if (state.isSelecting) {
     if (state.selectionTool === 'lasso') {
         state.selectionPath.push(pos);
     } else {
         state.selectionStart = pos;
     }
-    redrawCanvas();
+    scheduleRedraw();
   }
 }
 
