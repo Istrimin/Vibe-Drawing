@@ -25,10 +25,10 @@ html, body {
 /* Canvas Container */
 .canvas-container {
     position: absolute;
-    top: 40px; /* Make space for top toolbar */
-    bottom: 54px; /* Height of status bar (24px) + timeline controls (30px) */
-    left: 42px;  /* Width of left toolbar */
-    right: 60px; /* Width of right toolbar */
+    top: 32px; /* Compact top toolbar */
+    bottom: 48px; /* Status bar (20px) + timeline (28px) */
+    left: 36px;  /* Compact left toolbar */
+    right: 44px; /* Compact right toolbar */
     overflow: hidden;
     transition: all 0.3s ease;
 }
@@ -55,11 +55,11 @@ html, body {
     background: #1e1e1e;
     border: 1px solid #333;
     border-top: none;
-    border-radius: 0 0 12px 12px;
-    padding: 4px 15px;
+    border-radius: 0 0 8px 8px;
+    padding: 3px 10px;
     z-index: 2000;
     display: flex;
-    gap: 20px;
+    gap: 12px;
     align-items: center;
     transition: transform 0.3s ease;
 }
@@ -68,26 +68,103 @@ html, body {
 }
 
 
-.tool-setting-horizontal { display: flex; align-items: center; gap: 8px; }
-.tool-setting-horizontal label { font-size: 12px; color: #999; }
+.tool-setting-horizontal { display: flex; align-items: center; gap: 4px; }
+.tool-setting-horizontal label { font-size: 10px; color: #999; }
+.tool-setting-horizontal.setting-grid { display: none; }
+.tool-setting-horizontal.setting-normal { display: flex; }
+/* When grid mode is active, show grid settings, hide normal */
+#app.mode-grid .tool-setting-horizontal.setting-grid { display: flex; }
+#app.mode-grid .tool-setting-horizontal.setting-normal { display: none; }
 .tool-setting-horizontal input[type="range"] {
     -webkit-appearance: none; appearance: none;
-    width: 100px; height: 4px; background: #444;
+    width: 60px; height: 3px; background: #444;
     outline: none; border-radius: 2px;
 }
 .tool-setting-horizontal input[type="range"]::-webkit-slider-thumb {
     -webkit-appearance: none; appearance: none;
-    width: 14px; height: 14px; background: #ddd;
+    width: 10px; height: 10px; background: #ddd;
     cursor: pointer; border-radius: 50%;
 }
-.tool-setting-horizontal span { font-size: 12px; color: #ddd; width: 25px; text-align: right; }
+.tool-setting-horizontal span { font-size: 10px; color: #ddd; width: 20px; text-align: right; }
 .tool-setting-horizontal input[type="color"] {
     -webkit-appearance: none; -moz-appearance: none; appearance: none;
-    width: 24px; height: 24px; background-color: transparent;
-    border: none; cursor: pointer; border-radius: 4px;
+    width: 20px; height: 20px; background-color: transparent;
+    border: none; cursor: pointer; border-radius: 3px;
 }
 .tool-setting-horizontal input[type="color"]::-webkit-color-swatch {
-    border-radius: 4px; border: 1px solid #444;
+    border-radius: 3px; border: 1px solid #444;
+}
+.tool-setting-horizontal select {
+    background: #333;
+    color: #ddd;
+    border: 1px solid #444;
+    border-radius: 3px;
+    padding: 2px 4px;
+    font-size: 10px;
+    cursor: pointer;
+}
+.tool-setting-horizontal .mode-btn {
+    background: #333;
+    color: #888;
+    border: 1px solid #444;
+    padding: 2px 8px;
+    font-size: 10px;
+    cursor: pointer;
+    border-radius: 3px;
+}
+.tool-setting-horizontal .mode-btn:first-of-type {
+    border-top-right-radius: 0;
+    border-bottom-right-radius: 0;
+}
+.tool-setting-horizontal .mode-btn:last-of-type {
+    border-top-left-radius: 0;
+    border-bottom-left-radius: 0;
+    border-left: none;
+}
+.tool-setting-horizontal .mode-btn.active {
+    background: #7b61ff;
+    color: #fff;
+}
+
+/* Mode toggle button - changes icon based on mode */
+.mode-toggle-btn {
+    width: 28px; height: 28px;
+    background: #7b61ff;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    padding: 0;
+}
+.mode-toggle-btn svg {
+    width: 14px; height: 14px;
+    position: absolute;
+}
+.mode-toggle-btn .icon-grid {
+    display: block;
+}
+.mode-toggle-btn .icon-pencil {
+    display: none;
+}
+.mode-toggle-btn:not(.active) .icon-grid {
+    display: none;
+}
+.mode-toggle-btn:not(.active) .icon-pencil {
+    display: block;
+}
+
+/* Select in toolbar */
+.tool-setting-horizontal select {
+    background: #333;
+    color: #ddd;
+    border: 1px solid #444;
+    border-radius: 3px;
+    padding: 2px 4px;
+    font-size: 10px;
+    height: 20px;
 }
 
 
@@ -103,23 +180,63 @@ html, body {
     z-index: 1000;
     transition: transform 0.3s ease;
     overflow-y: auto;
-    padding-top: 40px; /* Space for top toolbar */
+    padding-top: 32px; /* Space for compact top toolbar */
 }
 #app.top-toolbar-hidden #left-toolbar,
 #app.top-toolbar-hidden #right-toolbar {
     padding-top: 0;
 }
 
+/* Mode switch buttons in left toolbar */
+.tool-group.mode-switch {
+    flex-direction: column;
+    gap: 1px;
+}
+.tool-group.mode-switch .mode-btn {
+    background: #333;
+    color: #888;
+    border: 1px solid #444;
+    padding: 3px 8px;
+    font-size: 9px;
+    cursor: pointer;
+    border-radius: 3px;
+    width: 100%;
+}
+.tool-group.mode-switch .mode-btn:first-child {
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
+    border-bottom: none;
+}
+.tool-group.mode-switch .mode-btn:last-child {
+    border-top-left-radius: 0;
+    border-top-right-radius: 0;
+}
+.tool-group.mode-switch .mode-btn.active {
+    background: #7b61ff;
+    color: #fff;
+}
+
+/* Select in toolbar */
+.tool-group select {
+    background: #333;
+    color: #ddd;
+    border: 1px solid #444;
+    border-radius: 3px;
+    padding: 2px 4px;
+    font-size: 9px;
+    width: 28px;
+}
+
 
 #left-toolbar {
 	left: 0;
-    width: 42px;
+    width: 36px;
     border-width: 0 1px 0 0;
 }
 
 #right-toolbar {
 	right: 0;
-    width: 60px;
+    width: 44px;
     border-width: 0 0 0 1px;
     align-items: center;
 }
@@ -130,37 +247,38 @@ html, body {
 /* Tool Groups */
 .tool-group {
     display: flex;
-    padding: 5px 0;
+    padding: 3px 0;
     border-bottom: 1px solid #333;
     width: 100%;
     justify-content: center;
 }
 .tool-group:last-child { border-bottom: none; }
 
-.toolbar-vertical-buttons .tool-group { flex-direction: column; gap: 2px; }
-#right-toolbar .tool-group { flex-direction: row; flex-wrap: wrap; align-items: center; padding: 3px; gap: 2px; }
+.toolbar-vertical-buttons .tool-group { flex-direction: column; gap: 1px; }
+#right-toolbar .tool-group { flex-direction: row; flex-wrap: wrap; align-items: center; padding: 2px; gap: 1px; }
 
 /* Buttons */
 .tool-btn {
-    width: 32px; height: 32px; border: none; background-color: transparent;
-    color: #ccc; cursor: pointer; border-radius: 4px;
+    width: 28px; height: 28px; border: none; background-color: transparent;
+    color: #ccc; cursor: pointer; border-radius: 3px;
     display: flex; align-items: center; justify-content: center;
     transition: all 0.2s ease;
 }
 .tool-btn:hover { background-color: #333; }
 .tool-btn.active { background-color: #7b61ff; color: white; }
-.tool-btn svg { width: 16px; height: 16px; }
+.tool-btn svg { width: 14px; height: 14px; }
 
 /* Settings (vertical ones in sidebars) */
 .tool-setting {
     display: flex; flex-direction: column; align-items: center;
-    justify-content: center; width: 100%; gap: 2px; margin-bottom: 5px;
+    justify-content: center; width: 100%; gap: 2px; margin-bottom: 3px;
 }
 .tool-setting input[type="number"] {
     background-color: #111; color: #eee; border: 1px solid #333;
-    border-radius: 3px; width: 40px; padding: 2px; text-align: center;
+    border-radius: 3px; width: 32px; padding: 2px; text-align: center; font-size: 10px;
 }
-input#gridColorPicker { width: 30px; height: 30px; }
+input#gridColorPicker { width: 24px; height: 24px; }
+input#backgroundColorPicker { width: 24px; height: 24px; }
 
 
 /* --- PANEL & MENU TOGGLING --- */
@@ -358,11 +476,17 @@ input#gridColorPicker { width: 30px; height: 30px; }
 
 /* --- MISC --- */
 #statusBar {
-    position: absolute; bottom: 30px; left: 0; right: 0;
+    position: absolute; bottom: 28px; left: 0; right: 0;
     background: #1e1e1e; border-top: 1px solid #333;
-    height: 24px; font-size: 11px; color: #999; z-index: 1000;
-    display: flex; align-items: center; justify-content: space-between;
-    padding: 0 10px;
+    height: 20px; font-size: 10px; color: #999; z-index: 1000;
+    display: flex; align-items: center; gap: 10px;
+    padding: 0 8px;
+}
+#statusBar #colorStatus {
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    border: 1px solid #555;
 }
 
 /* --- TIMELINE CONTROLS --- */
@@ -373,7 +497,7 @@ input#gridColorPicker { width: 30px; height: 30px; }
     right: 0;
     background: #1e1e1e;
     border-top: 1px solid #333;
-    height: 30px;
+    height: 28px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -382,9 +506,20 @@ input#gridColorPicker { width: 30px; height: 30px; }
     padding: 0 10px;
 }
 
+.timeline-controls .tool-btn {
+    width: 20px;
+    height: 20px;
+    background: #333;
+    border-radius: 3px;
+}
+.timeline-controls .tool-btn svg {
+    width: 12px;
+    height: 12px;
+}
+
 .timeline-btn {
-    width: 22px;
-    height: 22px;
+    width: 18px;
+    height: 18px;
     border: none;
     background: #333;
     color: #ccc;
@@ -393,7 +528,7 @@ input#gridColorPicker { width: 30px; height: 30px; }
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 10px;
+    font-size: 9px;
     transition: all 0.2s ease;
 }
 

@@ -48,6 +48,9 @@ export const state = {
   showSymmetryLine: true,
   isCopying: false,
   gridBrushSize: 1,
+  gridEraserSize: 1,
+  gridUpscale: 1, // 1 = normal, 2 = 2x upscaled
+  drawingMode: 'grid', // 'grid' or 'normal'
   // Timeline / Playback
   isPlaying: false,
   playbackSpeed: 1, // 0.25, 0.5, 1, 2, 4
@@ -86,6 +89,8 @@ export function initializeElements() {
   elements.eraserSizeValue = document.getElementById('eraserSizeValue');
   elements.gridBrushSizeSlider = document.getElementById('gridBrushSizeSlider');
   elements.gridBrushSizeValue = document.getElementById('gridBrushSizeValue');
+  elements.gridUpscaleSelect = document.getElementById('gridUpscaleSelect');
+  elements.modeToggleBtn = document.getElementById('modeToggleBtn');
   elements.symmetryBtn = document.getElementById('symmetryBtn');
   elements.gridTransformBtn = document.getElementById('gridTransformBtn');
   elements.colorPalette = document.getElementById('colorPalette');

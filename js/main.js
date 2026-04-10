@@ -18,7 +18,67 @@ function init() {
   // setupCursorKeyboardShortcuts(); // Disabled to prevent conflicts with system tabs
   setupUI();
   loadState();
+  
+  // Center the view - calculate pan offset to center the grid
+  if (state.canvas && state.canvas.width > 0 && state.canvas.height > 0) {
+    const centerX = state.canvas.width / 2;
+    const centerY = state.canvas.height / 2;
+    state.panOffset.x = centerX;
+    state.panOffset.y = centerY;
+  }
+  
   updateStatusBar('Ready');
+  updateColorIndicator();
+  
+  // Set initial mode button state based on default drawing mode
+  if (state.drawingMode === 'grid') {
+    elements.modeToggleBtn.classList.add('active');
+    elements.app.classList.add('mode-grid');
+    state.selectionTool = 'grid-draw';
+    updateActiveTool('grid-draw');
+    state.showGrid = true;
+    const gridBtn = document.getElementById('gridBtn');
+    if (gridBtn) {
+      gridBtn.setAttribute('data-active', 'true');
+      gridBtn.classList.add('active');
+    }
+  } else {
+    elements.modeToggleBtn.classList.remove('active');
+  }
+  
+  // Hide/show tools based on initial mode
+  updateToolsForMode();
+  
+  redrawCanvas();
+}
+
+// Update color indicator in status bar
+function updateColorIndicator() {
+  const colorStatus = document.getElementById('colorStatus');
+  if (colorStatus) {
+    colorStatus.style.backgroundColor = state.drawingColor;
+  }
+}
+
+// Show/hide tools based on current mode
+function updateToolsForMode() {
+  const allToolButtons = document.querySelectorAll('#left-toolbar .tool-btn[data-tool]');
+  
+  // Tools available in Normal mode
+  const normalTools = ['pencil', 'select', 'eraser', 'pipette', 'fill', 'rect-select', 'lasso'];
+  // Tools available in Grid mode  
+  const gridTools = ['grid-draw', 'rect-select', 'lasso', 'pipette', 'select'];
+  
+  const availableTools = state.drawingMode === 'grid' ? gridTools : normalTools;
+  
+  allToolButtons.forEach(btn => {
+    const tool = btn.dataset.tool;
+    if (availableTools.includes(tool)) {
+      btn.style.display = 'flex';
+    } else {
+      btn.style.display = 'none';
+    }
+  });
 }
 
 // Setup event listeners
@@ -48,6 +108,46 @@ function setupEventListeners() {
   elements.clearCanvasBtn.addEventListener('click', clearCanvas);
   elements.saveBtn.addEventListener('click', saveProjectState);
   elements.loadBtn.addEventListener('click', loadState);
+  
+  // Fullscreen button
+  const fullscreenBtn = document.getElementById('fullscreenBtn');
+  if (fullscreenBtn) {
+    fullscreenBtn.addEventListener('click', () => {
+      if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen();
+      } else {
+        document.exitFullscreen();
+      }
+    });
+  }
+  
+  // Keyboard shortcut for fullscreen
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'f' && !e.ctrlKey && !e.altKey && document.activeElement.tagName !== 'INPUT') {
+      e.preventDefault();
+      if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen();
+      } else {
+        document.exitFullscreen();
+      }
+    }
+  });
+  
+  // Undo/Redo buttons
+  const undoBtn = document.getElementById('undoBtn');
+  const redoBtn = document.getElementById('redoBtn');
+  if (undoBtn) {
+    undoBtn.addEventListener('click', () => {
+      undo();
+      updateStatusBar('Undo');
+    });
+  }
+  if (redoBtn) {
+    redoBtn.addEventListener('click', () => {
+      redo();
+      updateStatusBar('Redo');
+    });
+  }
 
   // Grid
   const gridBtn = document.getElementById('gridBtn');
@@ -97,12 +197,89 @@ function setupEventListeners() {
     elements.gridBrushSizeValue.textContent = e.target.value;
   });
 
+  const gridEraserSizeSlider = document.getElementById('gridEraserSizeSlider');
+  const gridEraserSizeValue = document.getElementById('gridEraserSizeValue');
+  if (gridEraserSizeSlider) {
+    gridEraserSizeSlider.addEventListener('input', (e) => {
+      state.gridEraserSize = parseInt(e.target.value, 10);
+      gridEraserSizeValue.textContent = e.target.value;
+    });
+  }
+
+  elements.gridUpscaleSelect.addEventListener('change', (e) => {
+    state.gridUpscale = parseInt(e.target.value, 10);
+    redrawCanvas();
+  });
+
+  // Mode toggle button - single button that switches between Grid and Normal
+  elements.modeToggleBtn.addEventListener('click', () => {
+    if (state.drawingMode === 'grid') {
+      // Switch to Normal mode
+      state.drawingMode = 'normal';
+      elements.modeToggleBtn.classList.remove('active');
+      elements.app.classList.remove('mode-grid');
+      updateToolsForMode();
+      if (state.previousTool) {
+        state.selectionTool = state.previousTool;
+        updateActiveTool(state.previousTool);
+      }
+      updateStatusBar('Mode: Normal');
+    } else {
+      // Switch to Grid mode
+      state.drawingMode = 'grid';
+      elements.modeToggleBtn.classList.add('active');
+      elements.app.classList.add('mode-grid');
+      state.previousTool = state.selectionTool;
+      state.selectionTool = 'grid-draw';
+      updateActiveTool('grid-draw');
+      state.showGrid = true;
+      document.getElementById('gridBtn').setAttribute('data-active', 'true');
+      document.getElementById('gridBtn').classList.add('active');
+      updateToolsForMode();
+      updateStatusBar('Mode: Grid');
+    }
+    redrawCanvas();
+  });
+
+  // Keyboard shortcuts for mode switching
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'q' && !e.ctrlKey && !e.altKey && document.activeElement.tagName !== 'INPUT') {
+      // Toggle mode
+      if (state.drawingMode !== 'grid') {
+        state.drawingMode = 'grid';
+        elements.modeToggleBtn.classList.add('active');
+        elements.app.classList.add('mode-grid');
+        state.previousTool = state.selectionTool;
+        state.selectionTool = 'grid-draw';
+        updateActiveTool('grid-draw');
+        state.showGrid = true;
+        document.getElementById('gridBtn').setAttribute('data-active', 'true');
+        document.getElementById('gridBtn').classList.add('active');
+        updateToolsForMode();
+        updateStatusBar('Mode: Grid (Q)');
+      } else {
+        state.drawingMode = 'normal';
+        elements.modeToggleBtn.classList.remove('active');
+        elements.app.classList.remove('mode-grid');
+        updateToolsForMode();
+        if (state.previousTool) {
+          state.selectionTool = state.previousTool;
+          updateActiveTool(state.previousTool);
+        }
+        updateStatusBar('Mode: Normal');
+      }
+      redrawCanvas();
+    }
+  });
+
   elements.brushColorPicker.addEventListener('input', (e) => {
     state.drawingColor = e.target.value;
+    updateColorIndicator();
   });
   // Add change event for first click color selection
   elements.brushColorPicker.addEventListener('change', (e) => {
     state.drawingColor = e.target.value;
+    updateColorIndicator();
     // Remove active class from color swatches when using native picker
     elements.colorPalette.querySelectorAll('.color-swatch').forEach(btn => btn.classList.remove('active'));
   });
@@ -112,6 +289,7 @@ function setupEventListeners() {
     if (e.target.classList.contains('color-swatch')) {
       const color = e.target.dataset.color;
       state.drawingColor = color;
+      updateColorIndicator();
       // Update UI
       elements.colorPalette.querySelectorAll('.color-swatch').forEach(btn => btn.classList.remove('active'));
       e.target.classList.add('active');
@@ -529,9 +707,9 @@ function handleCanvasMouseDown(e) {
     state.isDrawing = true; // Start drawing state for grid
     // Save state BEFORE making changes for proper undo
     saveState();
-    const gridSize = state.gridSize;
+    const effectiveGridSize = state.gridSize * state.gridUpscale;
 
-    state.lastGridCell = { x: Math.floor(pos.x / gridSize) * gridSize, y: Math.floor(pos.y / gridSize) * gridSize };
+    state.lastGridCell = { x: Math.floor(pos.x / effectiveGridSize) * effectiveGridSize, y: Math.floor(pos.y / effectiveGridSize) * effectiveGridSize };
     state.lastGridMousePos = { x: pos.x, y: pos.y };
 
     if (e.button === 0) { // Left-click to fill grid cell
@@ -546,8 +724,8 @@ function handleCanvasMouseDown(e) {
       // Draw a square area of size brushSize x brushSize
       for (let dx = -halfSize; dx <= halfSize; dx++) {
         for (let dy = -halfSize; dy <= halfSize; dy++) {
-          const cellX = centerX + dx * gridSize;
-          const cellY = centerY + dy * gridSize;
+          const cellX = centerX + dx * effectiveGridSize;
+          const cellY = centerY + dy * effectiveGridSize;
           const existingCellIndex = state.gridCells.findIndex(cell => cell.x === cellX && cell.y === cellY);
           if (existingCellIndex !== -1) {
             state.gridCells[existingCellIndex].color = state.drawingColor;
@@ -569,16 +747,16 @@ function handleCanvasMouseDown(e) {
       }
     } else if (e.button === 2) { // Right-click to erase grid cell
       // Simple implementation for eraser
-      const eraserSize = state.gridBrushSize;
+      const eraserSize = state.gridEraserSize;
       const halfSize = Math.floor(eraserSize / 2);
       const centerX = state.lastGridCell.x;
       const centerY = state.lastGridCell.y;
       
-      // Erase a square area of size eraserSize x eraserSize
+      // Erase a square area of size eraserSize x eraserSize - use BASE gridSize for position
       for (let dx = -halfSize; dx <= halfSize; dx++) {
         for (let dy = -halfSize; dy <= halfSize; dy++) {
-          const cellX = centerX + dx * gridSize;
-          const cellY = centerY + dy * gridSize;
+          const cellX = centerX + dx * state.gridSize;
+          const cellY = centerY + dy * state.gridSize;
           // Remove the cell and its symmetric counterparts if symmetry is active
           if (state.symmetry.isActive()) {
             const cellsToRemove = state.symmetry.transformGridCells([{ x: cellX, y: cellY, color: '' }], state.gridSize);
@@ -628,6 +806,7 @@ function handleCanvasMouseDown(e) {
 
     state.drawingColor = hexColor;
     elements.brushColorPicker.value = hexColor;
+    updateColorIndicator();
 
     // Only switch back to pencil if NOT holding Alt key
     if (!state.altKeyDown) {
@@ -709,17 +888,18 @@ function handleCanvasMouseMove(e) {
   if (state.isDrawing) {
     // Grid Draw continuous
     if (state.selectionTool === 'grid-draw') {
-        const gridSize = state.gridSize;
+        // Use BASE gridSize for cell position calculation
+        const baseGridSize = state.gridSize;
 
         // Use interpolation between last mouse position and current position
-        // to fill all cells that the mouse passed through
+        // to fill all cells that the mouse passed through - use base grid
         if (state.lastGridMousePos && (state.lastGridMousePos.x !== pos.x || state.lastGridMousePos.y !== pos.y)) {
             const cells = getCellsBetweenPoints(
                 state.lastGridMousePos.x,
                 state.lastGridMousePos.y,
                 pos.x,
                 pos.y,
-                gridSize
+                baseGridSize
             );
 
             // Determine brush size for grid drawing
@@ -729,15 +909,15 @@ function handleCanvasMouseMove(e) {
             for (const cell of cells) {
                 // For grid drawing, we'll apply the brush size to determine the area
                 if (e.buttons === 1) { // Left mouse button (fill)
-                    // Simple implementation: fill a square area around the cell
+                    // Simple implementation: fill a square area around the cell - use base gridSize
                     const brushSize = state.gridBrushSize;
                     const halfSize = Math.floor(brushSize / 2);
                     const centerX = cell.x;
                     const centerY = cell.y;
                     for (let dx = -halfSize; dx <= halfSize; dx++) {
                       for (let dy = -halfSize; dy <= halfSize; dy++) {
-                        const filledX = centerX + dx * gridSize;
-                        const filledY = centerY + dy * gridSize;
+                        const filledX = centerX + dx * baseGridSize;
+                        const filledY = centerY + dy * baseGridSize;
                         const existingCellIndex = state.gridCells.findIndex(c => c.x === filledX && c.y === filledY);
                         if (existingCellIndex !== -1) {
                           state.gridCells[existingCellIndex].color = state.drawingColor;
@@ -758,15 +938,15 @@ function handleCanvasMouseMove(e) {
                       }
                     }
                 } else if (e.buttons === 2) { // Right mouse button (erase)
-                    // Simple implementation: erase a square area around the cell
-                    const eraserSize = state.gridBrushSize;
+                    // Simple implementation: erase a square area around the cell - use base gridSize
+                    const eraserSize = state.gridEraserSize;
                     const halfSize = Math.floor(eraserSize / 2);
                     const centerX = cell.x;
                     const centerY = cell.y;
                     for (let dx = -halfSize; dx <= halfSize; dx++) {
                       for (let dy = -halfSize; dy <= halfSize; dy++) {
-                        const erasedX = centerX + dx * gridSize;
-                        const erasedY = centerY + dy * gridSize;
+                        const erasedX = centerX + dx * baseGridSize;
+                        const erasedY = centerY + dy * baseGridSize;
                         // Remove the cell and its symmetric counterparts if symmetry is active
                         if (state.symmetry.isActive()) {
                           const cellsToRemove = state.symmetry.transformGridCells([{ x: erasedX, y: erasedY, color: '' }], state.gridSize);
@@ -784,8 +964,8 @@ function handleCanvasMouseMove(e) {
                 }
             }
 
-            // Update last cell to the current cell
-            state.lastGridCell = { x: Math.floor(pos.x / gridSize) * gridSize, y: Math.floor(pos.y / gridSize) * gridSize };
+            // Update last cell to the current cell - use base gridSize
+            state.lastGridCell = { x: Math.floor(pos.x / baseGridSize) * baseGridSize, y: Math.floor(pos.y / baseGridSize) * baseGridSize };
             state.lastGridMousePos = { x: pos.x, y: pos.y };
             redrawCanvas();
         }
