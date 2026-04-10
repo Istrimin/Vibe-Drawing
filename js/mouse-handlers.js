@@ -69,8 +69,8 @@ export function handleCanvasMouseDown(e) {
     saveState();
 
     // Snap position to base grid
-    const snappedX = Math.floor(pos.x / state.gridSize) * state.gridSize;
-    const snappedY = Math.floor(pos.y / state.gridSize) * state.gridSize;
+    const snappedX = Math.floor(pos.x / state.cellSize) * state.cellSize;
+    const snappedY = Math.floor(pos.y / state.cellSize) * state.cellSize;
 
     state.lastGridCell = { x: snappedX, y: snappedY };
     state.lastGridMousePos = { x: pos.x, y: pos.y };
@@ -84,8 +84,8 @@ export function handleCanvasMouseDown(e) {
       // Draw cells
       for (let dx = -halfSize; dx <= halfSize; dx++) {
         for (let dy = -halfSize; dy <= halfSize; dy++) {
-          const cellX = centerX + dx * state.gridSize;
-          const cellY = centerY + dy * state.gridSize;
+          const cellX = centerX + dx * state.cellSize;
+          const cellY = centerY + dy * state.cellSize;
           const cellKey = getGridCellKey(cellX, cellY);
           if (state._gridCellsSet.has(cellKey)) {
             // Update color of existing cell
@@ -93,7 +93,7 @@ export function handleCanvasMouseDown(e) {
             if (existingCell) existingCell.color = state.drawingColor;
             // When symmetry is active, also update symmetric counterparts
             if (state.symmetry.isActive()) {
-              const symmetric = state.symmetry.transformGridCells([{ x: cellX, y: cellY, color: state.drawingColor }], state.gridSize);
+              const symmetric = state.symmetry.transformGridCells([{ x: cellX, y: cellY, color: state.drawingColor }], state.cellSize);
               symmetric.shift(); // remove original
               for (const s of symmetric) {
                 const symCell = state.gridCells.find(cc => cc.x === s.x && cc.y === s.y);
@@ -105,7 +105,7 @@ export function handleCanvasMouseDown(e) {
             state._gridCellsSet.add(cellKey);
             state.gridCells.push(newCell);
             if (state.symmetry.isActive()) {
-              const symmetric = state.symmetry.transformGridCells([newCell], state.gridSize);
+              const symmetric = state.symmetry.transformGridCells([newCell], state.cellSize);
               symmetric.shift();
               for (const s of symmetric) {
                 const sKey = getGridCellKey(s.x, s.y);
@@ -127,11 +127,11 @@ export function handleCanvasMouseDown(e) {
       // Erase cells
       for (let dx = -halfSize; dx <= halfSize; dx++) {
         for (let dy = -halfSize; dy <= halfSize; dy++) {
-          const cellX = centerX + dx * state.gridSize;
-          const cellY = centerY + dy * state.gridSize;
+          const cellX = centerX + dx * state.cellSize;
+          const cellY = centerY + dy * state.cellSize;
           // Remove the cell and its symmetric counterparts if symmetry is active
           if (state.symmetry.isActive()) {
-            const cellsToRemove = state.symmetry.transformGridCells([{ x: cellX, y: cellY, color: '' }], state.gridSize);
+            const cellsToRemove = state.symmetry.transformGridCells([{ x: cellX, y: cellY, color: '' }], state.cellSize);
             const toRemoveSet = new Set(cellsToRemove.map(cr => getGridCellKey(cr.x, cr.y)));
             state.gridCells = state.gridCells.filter(cell => {
               const k = getGridCellKey(cell.x, cell.y);
@@ -299,7 +299,7 @@ export function handleCanvasMouseMove(e) {
                 state.lastGridMousePos.y,
                 pos.x,
                 pos.y,
-                state.gridSize
+                state.cellSize
             );
 
             for (const cell of cells) {
@@ -311,8 +311,8 @@ export function handleCanvasMouseMove(e) {
                     const centerY = cell.y;
                     for (let dx = -halfSize; dx <= halfSize; dx++) {
                       for (let dy = -halfSize; dy <= halfSize; dy++) {
-                        const filledX = centerX + dx * state.gridSize;
-                        const filledY = centerY + dy * state.gridSize;
+                        const filledX = centerX + dx * state.cellSize;
+                        const filledY = centerY + dy * state.cellSize;
                         // Fast Set-based lookup
                         const cellKey = getGridCellKey(filledX, filledY);
                         if (state._gridCellsSet.has(cellKey)) {
@@ -321,7 +321,7 @@ export function handleCanvasMouseMove(e) {
                           if (existingCell) existingCell.color = state.drawingColor;
                           // When symmetry is active, also update symmetric counterparts
                           if (state.symmetry.isActive()) {
-                            const symmetric = state.symmetry.transformGridCells([{ x: filledX, y: filledY, color: state.drawingColor }], state.gridSize);
+                            const symmetric = state.symmetry.transformGridCells([{ x: filledX, y: filledY, color: state.drawingColor }], state.cellSize);
                             symmetric.shift(); // remove original
                             for (const s of symmetric) {
                               const symCell = state.gridCells.find(cc => cc.x === s.x && cc.y === s.y);
@@ -334,7 +334,7 @@ export function handleCanvasMouseMove(e) {
                           state.gridCells.push(newCell);
                           // Add symmetric cells with fast lookup
                           if (state.symmetry.isActive()) {
-                            const symmetric = state.symmetry.transformGridCells([newCell], state.gridSize);
+                            const symmetric = state.symmetry.transformGridCells([newCell], state.cellSize);
                             symmetric.shift(); // remove original
                             for (const s of symmetric) {
                               const sKey = getGridCellKey(s.x, s.y);
@@ -355,11 +355,11 @@ export function handleCanvasMouseMove(e) {
                     const centerY = cell.y;
                     for (let dx = -halfSize; dx <= halfSize; dx++) {
                       for (let dy = -halfSize; dy <= halfSize; dy++) {
-                        const erasedX = centerX + dx * state.gridSize;
-                        const erasedY = centerY + dy * state.gridSize;
+                        const erasedX = centerX + dx * state.cellSize;
+                        const erasedY = centerY + dy * state.cellSize;
                         // Remove the cell and its symmetric counterparts if symmetry is active
                         if (state.symmetry.isActive()) {
-                          const cellsToRemove = state.symmetry.transformGridCells([{ x: erasedX, y: erasedY, color: '' }], state.gridSize);
+                          const cellsToRemove = state.symmetry.transformGridCells([{ x: erasedX, y: erasedY, color: '' }], state.cellSize);
                           const toRemoveSet = new Set(cellsToRemove.map(cr => getGridCellKey(cr.x, cr.y)));
                           state.gridCells = state.gridCells.filter(cell => {
                             const k = getGridCellKey(cell.x, cell.y);
@@ -380,7 +380,7 @@ export function handleCanvasMouseMove(e) {
             }
 
             // Update last cell to the current cell
-            state.lastGridCell = { x: Math.floor(pos.x / state.gridSize) * state.gridSize, y: Math.floor(pos.y / state.gridSize) * state.gridSize };
+            state.lastGridCell = { x: Math.floor(pos.x / state.cellSize) * state.cellSize, y: Math.floor(pos.y / state.cellSize) * state.cellSize };
             state.lastGridMousePos = { x: pos.x, y: pos.y };
             scheduleRedraw();
         }
@@ -408,8 +408,8 @@ export function handleCanvasMouseMove(e) {
     let snappedDy = dy;
 
     if (state.selectionTool === 'grid-draw' || state.showGrid) {
-      snappedDx = Math.round(dx / state.gridSize) * state.gridSize;
-      snappedDy = Math.round(dy / state.gridSize) * state.gridSize;
+      snappedDx = Math.round(dx / state.cellSize) * state.cellSize;
+      snappedDy = Math.round(dy / state.cellSize) * state.cellSize;
     }
 
     state.ghostOffset = { x: snappedDx, y: snappedDy };

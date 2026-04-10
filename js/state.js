@@ -28,6 +28,7 @@ export const state = {
   eraserSize: 20,
   showGrid: true,
   gridSize: 1,
+  cellSize: 1,
   gridType: 'square',
   gridColor: '#006400',
   backgroundColor: '#2d2d2d',

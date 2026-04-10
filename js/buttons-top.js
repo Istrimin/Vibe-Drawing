@@ -21,7 +21,6 @@ export function createTopToolbar() {
     const colorSetting = document.createElement('div');
     colorSetting.className = 'tool-setting-horizontal no-mode';
     colorSetting.innerHTML = `
-        <label for="brushColorPicker">Color</label>
         <input type="color" id="brushColorPicker" value="#ffffff" title="Brush Color">
         <div id="colorPalette" class="color-palette-container"></div>
         <input type="color" id="swatchColorPicker" style="position: absolute; visibility: hidden; width: 0; height: 0;" title="">

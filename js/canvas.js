@@ -97,11 +97,11 @@ function renderGridCellsToCache() {
     const cell = state.gridCells[i];
     if (cell.x < minX) minX = cell.x;
     if (cell.y < minY) minY = cell.y;
-    if (cell.x + state.gridSize > maxX) maxX = cell.x + state.gridSize;
-    if (cell.y + state.gridSize > maxY) maxY = cell.y + state.gridSize;
+    if (cell.x + state.cellSize > maxX) maxX = cell.x + state.cellSize;
+    if (cell.y + state.cellSize > maxY) maxY = cell.y + state.cellSize;
   }
 
-  const padding = state.gridSize * 2;
+  const padding = state.cellSize * 2;
   const width = maxX - minX + padding * 2;
   const height = maxY - minY + padding * 2;
 
@@ -127,7 +127,7 @@ function renderGridCellsToCache() {
   for (const [color, cells] of cellsByColor) {
     ctx.fillStyle = color;
     for (let j = 0; j < cells.length; j++) {
-      ctx.fillRect(cells[j].x, cells[j].y, state.gridSize, state.gridSize);
+      ctx.fillRect(cells[j].x, cells[j].y, state.cellSize, state.cellSize);
     }
   }
 
@@ -316,7 +316,7 @@ function redrawCanvas() {
   }
 
   // Draw grid cells - DIRECT rendering with spatial hash culling + batching
-  const gs = state.gridSize;
+  const gs = state.cellSize;
   const visStartX = -state.panOffset.x / state.zoomLevel;
   const visStartY = -state.panOffset.y / state.zoomLevel;
   const visEndX = visStartX + state.canvas.width / state.zoomLevel;

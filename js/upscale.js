@@ -17,7 +17,7 @@ function scaleBy2x(saveState) {
   // Save state BEFORE scaling for undo support
   saveState();
 
-  const gridSize = state.gridSize;
+  const cellSize = state.cellSize;
 
   // Calculate center of content before upscale
   let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
@@ -35,14 +35,14 @@ function scaleBy2x(saveState) {
 
   // Each cell becomes a 2x2 block
   for (const cell of state.gridCells) {
-    const gx = Math.round(cell.x / gridSize);
-    const gy = Math.round(cell.y / gridSize);
+    const gx = Math.round(cell.x / cellSize);
+    const gy = Math.round(cell.y / cellSize);
 
     // 2x2 block at double resolution
     for (let dx = 0; dx < 2; dx++) {
       for (let dy = 0; dy < 2; dy++) {
-        const nx = (gx * 2 + dx) * gridSize;
-        const ny = (gy * 2 + dy) * gridSize;
+        const nx = (gx * 2 + dx) * cellSize;
+        const ny = (gy * 2 + dy) * cellSize;
         const key = `${nx},${ny}`;
         if (!seen.has(key)) {
           seen.add(key);
