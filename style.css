@@ -69,7 +69,7 @@ html, body {
 
 
 .tool-setting-horizontal { display: flex; align-items: center; gap: 4px; }
-.tool-setting-horizontal label { font-size: 10px; color: #999; }
+.tool-setting-horizontal label { font-size: 16px; color: #999; cursor: default; }
 .tool-setting-horizontal.setting-grid { display: none; }
 .tool-setting-horizontal.setting-normal { display: flex; }
 /* When grid mode is active, show grid settings, hide normal */
@@ -85,7 +85,7 @@ html, body {
     width: 10px; height: 10px; background: #ddd;
     cursor: pointer; border-radius: 50%;
 }
-.tool-setting-horizontal span { font-size: 10px; color: #ddd; width: 20px; text-align: right; }
+.tool-setting-horizontal span { font-size: 11px; color: #ddd; width: 24px; text-align: right; }
 .tool-setting-horizontal input[type="color"] {
     -webkit-appearance: none; -moz-appearance: none; appearance: none;
     width: 20px; height: 20px; background-color: transparent;
@@ -315,38 +315,36 @@ html, body {
 #right-toolbar .tool-btn { width: 31px; height: 31px; }
 .timeline-controls .tool-btn svg { width: 12px; height: 12px; }
 
-/* Custom tooltips */
+/* Custom tooltips - always appear to the LEFT of the button */
 .tool-btn .tooltip-text {
     visibility: hidden;
     opacity: 0;
     position: fixed;
-    bottom: 20px;
-    left: 50%;
-    transform: translateX(-50%);
-    padding: 6px 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    padding: 5px 8px;
     background: #0a0a0a;
     color: #eee;
-    font-size: 12px;
+    font-size: 11px;
     white-space: nowrap;
-    border-radius: 5px;
+    border-radius: 4px;
     border: 1px solid #555;
     pointer-events: none;
-    transition: opacity 0.15s ease, visibility 0.15s ease;
+    transition: opacity 0.12s ease, visibility 0.12s ease;
     z-index: 99999;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.6);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.5);
     font-weight: 500;
 }
 .tool-btn .tooltip-arrow {
     visibility: hidden;
     opacity: 0;
     position: fixed;
-    bottom: 15px;
-    left: 50%;
-    transform: translateX(-50%);
+    top: 50%;
+    transform: translateY(-50%);
     border: 5px solid transparent;
-    border-top-color: #0a0a0a;
+    border-left-color: #0a0a0a;
     pointer-events: none;
-    transition: opacity 0.15s ease, visibility 0.15s ease;
+    transition: opacity 0.12s ease, visibility 0.12s ease;
     z-index: 99999;
 }
 .tool-btn:hover .tooltip-text,
@@ -402,7 +400,7 @@ html, body {
     display: flex; flex-direction: column; align-items: center;
     justify-content: center; width: 100%; gap: 2px; margin-bottom: 3px;
 }
-.tool-setting label { font-size: 8px; color: #999; margin-bottom: 1px; }
+.tool-setting label { font-size: 16px; color: #999; margin-bottom: 1px; cursor: default; }
 .tool-setting label[title] {
     font-size: 16px;
     cursor: help;
@@ -422,7 +420,7 @@ html, body {
     width: 8px; height: 8px; background: #7b61ff;
     cursor: pointer; border-radius: 50%;
 }
-.tool-setting span { font-size: 8px; color: #7b61ff; width: 20px; text-align: center; font-weight: bold; }
+.tool-setting span { font-size: 10px; color: #7b61ff; width: 24px; text-align: center; font-weight: bold; }
 input#gridColorPicker { width: 24px; height: 24px; }
 input#backgroundColorPicker { width: 24px; height: 24px; }
 
@@ -852,19 +850,69 @@ input#backgroundColorPicker { width: 24px; height: 24px; }
 }
 
 .timeline-controls .tool-btn {
-    width: 20px;
-    height: 20px;
-    background: #333;
-    border-radius: 3px;
-}
-
-.timeline-btn {
     width: 24px;
     height: 24px;
     border: none;
-    background: #2a2a2a;
-    color: #ccc;
-    border-radius: 4px;
+    border-radius: 6px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    position: relative;
+    overflow: hidden;
+}
+.timeline-controls .tool-btn::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, rgba(255,255,255,0.2) 0%, transparent 50%);
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+.timeline-controls .tool-btn:hover::before {
+    opacity: 1;
+}
+#undoBtn {
+    background: linear-gradient(135deg, #FF6B6B 0%, #ee5a5a 100%);
+    box-shadow: 0 2px 6px rgba(255, 107, 107, 0.4), inset 0 1px 0 rgba(255,255,255,0.2);
+}
+#undoBtn:hover {
+    background: linear-gradient(135deg, #ff8585 0%, #FF6B6B 100%);
+    transform: scale(1.15);
+    box-shadow: 0 4px 12px rgba(255, 107, 107, 0.6), inset 0 1px 0 rgba(255,255,255,0.3);
+}
+#redoBtn {
+    background: linear-gradient(135deg, #4ECDC4 0%, #2ab7a9 100%);
+    box-shadow: 0 2px 6px rgba(78, 205, 196, 0.4), inset 0 1px 0 rgba(255,255,255,0.2);
+}
+#redoBtn:hover {
+    background: linear-gradient(135deg, #6ed7cf 0%, #4ECDC4 100%);
+    transform: scale(1.15);
+    box-shadow: 0 4px 12px rgba(78, 205, 196, 0.6), inset 0 1px 0 rgba(255,255,255,0.3);
+}
+#tasksBtn {
+    background: linear-gradient(135deg, #FFD700 0%, #ffb700 100%);
+    box-shadow: 0 2px 6px rgba(255, 215, 0, 0.4), inset 0 1px 0 rgba(255,255,255,0.3);
+}
+#tasksBtn:hover {
+    background: linear-gradient(135deg, #ffe44d 0%, #FFD700 100%);
+    transform: scale(1.15);
+    box-shadow: 0 4px 12px rgba(255, 215, 0, 0.6), inset 0 1px 0 rgba(255,255,255,0.4);
+}
+.timeline-controls .tool-btn svg {
+    width: 14px;
+    height: 14px;
+    filter: drop-shadow(0 1px 2px rgba(0,0,0,0.3));
+}
+
+.timeline-btn {
+    width: 28px;
+    height: 28px;
+    border: none;
+    background: linear-gradient(135deg, #374151 0%, #1f2937 100%);
+    color: #e5e7eb;
+    border-radius: 6px;
     cursor: pointer;
     display: flex;
     align-items: center;
@@ -873,12 +921,13 @@ input#backgroundColorPicker { width: 24px; height: 24px; }
     transition: all 0.2s ease;
     position: relative;
     overflow: hidden;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.1);
 }
 .timeline-btn::before {
     content: '';
     position: absolute;
     inset: 0;
-    background: radial-gradient(circle at center, rgba(255,255,255,0.08) 0%, transparent 70%);
+    background: linear-gradient(135deg, rgba(255,255,255,0.15) 0%, transparent 50%);
     opacity: 0;
     transition: opacity 0.2s ease;
 }
@@ -886,52 +935,65 @@ input#backgroundColorPicker { width: 24px; height: 24px; }
     opacity: 1;
 }
 .timeline-btn:hover {
-    background: #3a3a3a;
+    background: linear-gradient(135deg, #4b5563 0%, #374151 100%);
     color: white;
-    transform: scale(1.1);
-    box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+    transform: scale(1.15);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.15);
 }
 .timeline-btn.playing {
-    background: linear-gradient(135deg, #8b71ff 0%, #6b51ef 100%);
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
     color: white;
-    box-shadow: 0 0 8px rgba(123, 97, 255, 0.5);
+    box-shadow: 0 0 12px rgba(16, 185, 129, 0.5), 0 2px 4px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.2);
+}
+.timeline-btn.playing:hover {
+    background: linear-gradient(135deg, #34d399 0%, #10b981 100%);
+    box-shadow: 0 0 16px rgba(16, 185, 129, 0.7), 0 4px 12px rgba(0,0,0,0.4);
+}
+#timelineSpeedBtn {
+    background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+}
+#timelineSpeedBtn:hover {
+    background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+    box-shadow: 0 4px 12px rgba(245, 158, 11, 0.5), 0 2px 4px rgba(0,0,0,0.3);
 }
 .timeline-btn svg {
     width: 16px;
     height: 16px;
+    filter: drop-shadow(0 1px 2px rgba(0,0,0,0.3));
 }
 
 .timeline-slider {
     -webkit-appearance: none;
     appearance: none;
     width: 100%;
-    height: 4px;
-    background: #444;
+    height: 6px;
+    background: linear-gradient(90deg, #1f2937 0%, #374151 100%);
     outline: none;
-    border-radius: 2px;
+    border-radius: 3px;
     cursor: pointer;
     position: relative;
-    min-width: 200px; /* Minimum width to ensure usability */
+    min-width: 200px;
+    box-shadow: inset 0 1px 3px rgba(0,0,0,0.4);
 }
 
 .timeline-slider::-webkit-slider-thumb {
     -webkit-appearance: none;
     appearance: none;
-    width: 12px;
-    height: 12px;
-    background: #7b61ff;
+    width: 14px;
+    height: 14px;
+    background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
     border-radius: 50%;
     cursor: pointer;
     z-index: 10;
     position: relative;
-    box-shadow: 0 0 0 2px #1e1e1e, 0 0 0 4px #7b61ff;
+    box-shadow: 0 0 0 2px #1e1e1e, 0 0 8px rgba(139, 92, 246, 0.6);
     border: 2px solid #1e1e1e;
 }
 
 .timeline-slider::-moz-range-thumb {
-    width: 12px;
-    height: 12px;
-    background: #7b61ff;
+    width: 14px;
+    height: 14px;
+    background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
     border-radius: 50%;
     cursor: pointer;
     border: none;
@@ -998,9 +1060,14 @@ input#backgroundColorPicker { width: 24px; height: 24px; }
 
 #timelineFrame {
     font-size: 11px;
-    color: #aaa;
-    min-width: 40px;
+    font-family: 'Segoe UI', monospace;
+    color: #e5e7eb;
+    min-width: 45px;
     text-align: center;
+    background: linear-gradient(135deg, #374151 0%, #1f2937 100%);
+    padding: 3px 8px;
+    border-radius: 4px;
+    box-shadow: inset 0 1px 2px rgba(0,0,0,0.3), 0 1px 0 rgba(255,255,255,0.05);
 }
 ::-webkit-scrollbar { width: 4px; height: 4px; }
 ::-webkit-scrollbar-thumb { background: #444; }
@@ -1014,19 +1081,38 @@ input#backgroundColorPicker { width: 24px; height: 24px; }
     width: 22px;
     height: 22px;
     border: 2px solid #444;
-    border-radius: 50%; /* Circle shape */
+    border-radius: 50%;
     cursor: pointer;
     transition: transform 0.1s ease, border-color 0.1s ease, box-shadow 0.1s ease;
     padding: 0;
     position: relative;
     overflow: hidden;
 }
+/* Gradient overlay for all swatches - gives depth/shine effect */
 .color-swatch::before {
     content: '';
     position: absolute;
     inset: 0;
-    background: radial-gradient(circle at 30% 30%, rgba(255,255,255,0.3) 0%, transparent 60%);
+    background: radial-gradient(circle at 25% 25%, rgba(255,255,255,0.7) 0%, rgba(255,255,255,0.35) 35%, transparent 65%);
     border-radius: 50%;
+    pointer-events: none;
+    z-index: 1;
+}
+/* Yellow needs darker gradient since it's light */
+.color-swatch[data-color="#ffff00"]::before {
+    background: radial-gradient(circle at 25% 25%, rgba(255,255,255,0.5) 0%, rgba(200,200,0,0.3) 35%, transparent 65%);
+}
+/* Additional bottom shadow for 3D effect - ONLY for black swatch */
+.color-swatch[data-color="#000000"]::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 40%;
+    background: linear-gradient(to top, rgba(0,0,0,0.3) 0%, transparent 100%);
+    border-radius: 50%;
+    pointer-events: none;
 }
 .color-swatch:hover {
     transform: scale(1.15);

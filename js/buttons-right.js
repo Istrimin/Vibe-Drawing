@@ -40,22 +40,12 @@ export function createRightToolbar() {
             ${getGridSVG()}
         </button>
         <div class="tool-setting">
-            <label for="rightGridBrushSlider">G.B</label>
-            <input type="range" id="rightGridBrushSlider" min="1" max="15" step="1" value="1" data-tooltip="Grid Brush Size">
-            <span id="rightGridBrushValue">1</span>
+            <label>🎨</label>
+            <input type="color" id="gridColorPicker" value="#32CD32">
         </div>
         <div class="tool-setting">
-            <label for="gridSizeInputTop">G.Sz</label>
-            <input type="number" id="gridSizeInputRight" min="4" max="64" value="16">
-            <span id="gridSizeValueRight">16</span>
-        </div>
-        <div class="tool-setting">
-            <label title="🎨">🎨</label>
-            <input type="color" id="gridColorPicker" value="#32CD32" data-tooltip="Grid Color">
-        </div>
-        <div class="tool-setting">
-            <label title="🖌️">🖌️</label>
-            <input type="color" id="backgroundColorPicker" value="#1a1a1a" data-tooltip="Background Color">
+            <label>🖼️</label>
+            <input type="color" id="backgroundColorPicker" value="#1a1a1a">
         </div>
     `;
     rightToolbar.appendChild(gridGroup);
@@ -86,7 +76,7 @@ export function createRightToolbar() {
     const transformGroup = document.createElement('div');
     transformGroup.className = 'tool-group mode-switch';
     transformGroup.innerHTML = `
-        <button id="gridTransformBtn" data-mode="visual-only" title="Grid Transformation: Visual Only">Visual</button>
+        <button id="gridTransformBtn" data-mode="visual-only">Visual</button>
         <button id="gridTransformPermBtn" data-mode="permanent">Permanent</button>
     `;
     rightToolbar.appendChild(transformGroup);

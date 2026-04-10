@@ -25,12 +25,14 @@ export function initTooltips() {
       const tt = btn.querySelector('.tooltip-text');
       const ta = btn.querySelector('.tooltip-arrow');
       if (tt) {
-        tt.style.left = (rect.left + rect.width / 2) + 'px';
-        tt.style.bottom = (window.innerHeight - rect.top + 8) + 'px';
+        tt.style.top = (rect.top + rect.height / 2) + 'px';
+        tt.style.right = (window.innerWidth - rect.left + 8) + 'px';
+        tt.style.left = 'auto';
       }
       if (ta) {
-        ta.style.left = (rect.left + rect.width / 2) + 'px';
-        ta.style.bottom = (window.innerHeight - rect.top + 3) + 'px';
+        ta.style.top = (rect.top + rect.height / 2) + 'px';
+        ta.style.right = (window.innerWidth - rect.left + 3) + 'px';
+        ta.style.left = 'auto';
       }
     });
   });

@@ -39,6 +39,12 @@ export function saveState() {
         state.undoStack.shift();
         state.currentHistoryIndex = state.undoStack.length - 1;
     }
+    
+    // Update timeline frame counter immediately
+    const timelineFrame = document.getElementById('timelineFrame');
+    if (timelineFrame) {
+        timelineFrame.textContent = `${state.currentHistoryIndex + 1}/${state.undoStack.length}`;
+    }
 }
 
 export function undo() {
