@@ -49,7 +49,6 @@ export const state = {
   isCopying: false,
   gridBrushSize: 1,
   gridEraserSize: 1,
-  gridUpscale: 1, // 1 = normal, 2 = 2x upscaled
   drawingMode: 'grid', // 'grid' or 'normal'
   // Timeline / Playback
   isPlaying: false,
@@ -91,7 +90,7 @@ export function initializeElements() {
   elements.gridBrushSizeValue = document.getElementById('gridBrushSizeValue');
   elements.rightGridBrushSlider = document.getElementById('rightGridBrushSlider');
   elements.rightGridBrushValue = document.getElementById('rightGridBrushValue');
-  elements.gridUpscaleSelect = document.getElementById('gridUpscaleSelect');
+  elements.upscaleBtn = document.getElementById('upscaleBtn');
   elements.modeToggleBtn = document.getElementById('modeToggleBtn');
   elements.symmetryBtn = document.getElementById('symmetryBtn');
   elements.gridTransformBtn = document.getElementById('gridTransformBtn');

@@ -166,10 +166,9 @@ function redrawCanvas() {
   }
 
   // Draw grid cells
-  const effectiveGridSize = state.gridSize * state.gridUpscale;
   state.gridCells.forEach(cell => {
     state.ctx.fillStyle = cell.color;
-    state.ctx.fillRect(cell.x, cell.y, effectiveGridSize, effectiveGridSize);
+    state.ctx.fillRect(cell.x, cell.y, state.gridSize, state.gridSize);
   });
 
   // Draw images

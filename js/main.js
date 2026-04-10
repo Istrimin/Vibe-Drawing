@@ -6,6 +6,7 @@ import { floodFill } from './fill.js';
 import { initCursors, setPipetteCursor, setPencilCursor, setEraserCursor, resetCursor } from './cursors.js';
 import { getPathBoundingBox, doRectanglesIntersect, getCellsBetweenPoints } from './geometry.js';
 import { undo, redo, saveState, startPlayback, stopPlayback, pausePlayback, resumePlayback, setPlaybackSpeed, scrubToFrame, getPlaybackState, getHistoryLength } from './history.js';
+import { scaleBy2x } from './upscale.js';
 
 // --- Functions that were in script.js ---
 
@@ -237,9 +238,8 @@ function setupEventListeners() {
     });
   }
 
-  elements.gridUpscaleSelect.addEventListener('change', (e) => {
-    state.gridUpscale = parseInt(e.target.value, 10);
-    redrawCanvas();
+  elements.upscaleBtn.addEventListener('click', () => {
+    scaleBy2x(saveState);
   });
 
   // Mode toggle button - single button that switches between Grid and Normal
@@ -744,12 +744,11 @@ function handleCanvasMouseDown(e) {
     state.isDrawing = true; // Start drawing state for grid
     // Save state BEFORE making changes for proper undo
     saveState();
-    const effectiveGridSize = state.gridSize * state.gridUpscale;
 
-    // Snap position to effective grid (upscaled cells)
-    const snappedX = Math.floor(pos.x / effectiveGridSize) * effectiveGridSize;
-    const snappedY = Math.floor(pos.y / effectiveGridSize) * effectiveGridSize;
-    
+    // Snap position to base grid
+    const snappedX = Math.floor(pos.x / state.gridSize) * state.gridSize;
+    const snappedY = Math.floor(pos.y / state.gridSize) * state.gridSize;
+
     state.lastGridCell = { x: snappedX, y: snappedY };
     state.lastGridMousePos = { x: pos.x, y: pos.y };
 
@@ -759,11 +758,11 @@ function handleCanvasMouseDown(e) {
       const centerX = state.lastGridCell.x;
       const centerY = state.lastGridCell.y;
 
-      // Draw cells using effectiveGridSize (all cells same size)
+      // Draw cells
       for (let dx = -halfSize; dx <= halfSize; dx++) {
         for (let dy = -halfSize; dy <= halfSize; dy++) {
-          const cellX = centerX + dx * effectiveGridSize;
-          const cellY = centerY + dy * effectiveGridSize;
+          const cellX = centerX + dx * state.gridSize;
+          const cellY = centerY + dy * state.gridSize;
           const existingCellIndex = state.gridCells.findIndex(cell => cell.x === cellX && cell.y === cellY);
           if (existingCellIndex !== -1) {
             state.gridCells[existingCellIndex].color = state.drawingColor;
@@ -784,17 +783,16 @@ function handleCanvasMouseDown(e) {
         }
       }
     } else if (e.button === 2) { // Right-click to erase grid cell
-      // Simple implementation for eraser
       const eraserSize = state.gridEraserSize;
       const halfSize = Math.floor(eraserSize / 2);
       const centerX = state.lastGridCell.x;
       const centerY = state.lastGridCell.y;
 
-      // Erase a square area using effectiveGridSize
+      // Erase cells
       for (let dx = -halfSize; dx <= halfSize; dx++) {
         for (let dy = -halfSize; dy <= halfSize; dy++) {
-          const cellX = centerX + dx * effectiveGridSize;
-          const cellY = centerY + dy * effectiveGridSize;
+          const cellX = centerX + dx * state.gridSize;
+          const cellY = centerY + dy * state.gridSize;
           // Remove the cell and its symmetric counterparts if symmetry is active
           if (state.symmetry.isActive()) {
             const cellsToRemove = state.symmetry.transformGridCells([{ x: cellX, y: cellY, color: '' }], state.gridSize);
@@ -926,7 +924,6 @@ function handleCanvasMouseMove(e) {
   if (state.isDrawing) {
     // Grid Draw continuous
     if (state.selectionTool === 'grid-draw') {
-        const effectiveGridSize = state.gridSize * state.gridUpscale;
 
         // Use interpolation between last mouse position and current position
         // to fill all cells that the mouse passed through
@@ -936,11 +933,11 @@ function handleCanvasMouseMove(e) {
                 state.lastGridMousePos.y,
                 pos.x,
                 pos.y,
-                effectiveGridSize
+                state.gridSize
             );
 
             for (const cell of cells) {
-                // Fill a square area around the cell - use effectiveGridSize
+                // Fill a square area around the cell
                 if (e.buttons === 1) { // Left mouse button (fill)
                     const brushSize = state.gridBrushSize;
                     const halfSize = Math.floor(brushSize / 2);
@@ -948,8 +945,8 @@ function handleCanvasMouseMove(e) {
                     const centerY = cell.y;
                     for (let dx = -halfSize; dx <= halfSize; dx++) {
                       for (let dy = -halfSize; dy <= halfSize; dy++) {
-                        const filledX = centerX + dx * effectiveGridSize;
-                        const filledY = centerY + dy * effectiveGridSize;
+                        const filledX = centerX + dx * state.gridSize;
+                        const filledY = centerY + dy * state.gridSize;
                         const existingCellIndex = state.gridCells.findIndex(c => c.x === filledX && c.y === filledY);
                         if (existingCellIndex !== -1) {
                           state.gridCells[existingCellIndex].color = state.drawingColor;
@@ -970,15 +967,15 @@ function handleCanvasMouseMove(e) {
                       }
                     }
                 } else if (e.buttons === 2) { // Right mouse button (erase)
-                    // Erase a square area around the cell - use effectiveGridSize
+                    // Erase a square area around the cell
                     const eraserSize = state.gridEraserSize;
                     const halfSize = Math.floor(eraserSize / 2);
                     const centerX = cell.x;
                     const centerY = cell.y;
                     for (let dx = -halfSize; dx <= halfSize; dx++) {
                       for (let dy = -halfSize; dy <= halfSize; dy++) {
-                        const erasedX = centerX + dx * effectiveGridSize;
-                        const erasedY = centerY + dy * effectiveGridSize;
+                        const erasedX = centerX + dx * state.gridSize;
+                        const erasedY = centerY + dy * state.gridSize;
                         // Remove the cell and its symmetric counterparts if symmetry is active
                         if (state.symmetry.isActive()) {
                           const cellsToRemove = state.symmetry.transformGridCells([{ x: erasedX, y: erasedY, color: '' }], state.gridSize);
@@ -996,8 +993,8 @@ function handleCanvasMouseMove(e) {
                 }
             }
 
-            // Update last cell to the current cell - use effectiveGridSize
-            state.lastGridCell = { x: Math.floor(pos.x / effectiveGridSize) * effectiveGridSize, y: Math.floor(pos.y / effectiveGridSize) * effectiveGridSize };
+            // Update last cell to the current cell
+            state.lastGridCell = { x: Math.floor(pos.x / state.gridSize) * state.gridSize, y: Math.floor(pos.y / state.gridSize) * state.gridSize };
             state.lastGridMousePos = { x: pos.x, y: pos.y };
             redrawCanvas();
         }
