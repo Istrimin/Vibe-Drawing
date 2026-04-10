@@ -75,16 +75,33 @@ export function createLeftToolbar() {
     // Secondary tools group
     const secondaryGroup = document.createElement('div');
     secondaryGroup.className = 'tool-group';
-    secondaryGroup.innerHTML = `
-        <button class="tool-btn" id="symmetryBtn" title="Symmetry (Y)">
-            ${getSymmetrySVG()}
-        </button>
-        <button class="tool-btn" id="uploadBtn" title="Upload Image">
-            ${getUploadSVG()}
-        </button>
-        <input type="file" id="fileInput" accept="image/*" multiple style="display:none">
-    `;
+    
+    const symmetryBtn = document.createElement('button');
+    symmetryBtn.className = 'tool-btn';
+    symmetryBtn.id = 'symmetryBtn';
+    symmetryBtn.title = 'Symmetry (Y)';
+    symmetryBtn.innerHTML = getSymmetrySVG();
+    
+    const uploadBtn = document.createElement('button');
+    uploadBtn.className = 'tool-btn';
+    uploadBtn.id = 'uploadBtn';
+    uploadBtn.title = 'Upload Image';
+    uploadBtn.innerHTML = getUploadSVG();
+    
+    // Create file input but don't add to DOM yet (will be added after initApp)
+    const fileInput = document.createElement('input');
+    fileInput.type = 'file';
+    fileInput.id = 'fileInput';
+    fileInput.accept = 'image/*';
+    fileInput.multiple = true;
+    fileInput.style.display = 'none';
+    
+    secondaryGroup.appendChild(symmetryBtn);
+    secondaryGroup.appendChild(uploadBtn);
     leftToolbar.appendChild(secondaryGroup);
+    
+    // Store fileInput in window for later use
+    window._deferredFileInput = fileInput;
 }
 
 function getPencilSVG() {

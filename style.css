@@ -14,6 +14,90 @@ html, body {
     color: #e0e0e0;
 }
 
+/* --- INTRO SCREEN --- */
+#intro-screen {
+    position: fixed;
+    inset: 0;
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10000;
+    transition: opacity 0.5s ease, transform 0.5s ease;
+}
+
+#intro-screen.hidden {
+    opacity: 0;
+    transform: scale(1.1);
+    pointer-events: none;
+}
+
+.intro-content {
+    text-align: center;
+    z-index: 1;
+}
+
+.intro-title {
+    font-size: 64px;
+    font-weight: 700;
+    color: #fff;
+    margin: 0 0 8px 0;
+    letter-spacing: -2px;
+    text-shadow: 0 4px 20px rgba(123, 97, 255, 0.5);
+}
+
+.intro-subtitle {
+    font-size: 18px;
+    color: #8b8b9e;
+    margin-bottom: 48px;
+    font-weight: 300;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+}
+
+.start-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 12px;
+    padding: 16px 32px;
+    background: linear-gradient(135deg, #7b61ff 0%, #5b4ce0 100%);
+    color: white;
+    border: none;
+    border-radius: 50px;
+    font-size: 18px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 20px rgba(123, 97, 255, 0.4);
+}
+
+.start-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 30px rgba(123, 97, 255, 0.6);
+}
+
+.start-btn:active {
+    transform: translateY(0);
+}
+
+.start-btn svg {
+    transition: transform 0.3s ease;
+}
+
+.start-btn:hover svg {
+    transform: translateX(4px);
+}
+
+.intro-decoration {
+    position: absolute;
+    inset: 0;
+    background: 
+        radial-gradient(circle at 20% 80%, rgba(123, 97, 255, 0.15) 0%, transparent 40%),
+        radial-gradient(circle at 80% 20%, rgba(78, 205, 196, 0.1) 0%, transparent 40%),
+        radial-gradient(circle at 50% 50%, rgba(255, 107, 107, 0.08) 0%, transparent 50%);
+    pointer-events: none;
+}
+
 /* Main App Container */
 #app {
     position: relative;

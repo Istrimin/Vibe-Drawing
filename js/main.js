@@ -22,6 +22,27 @@ import { handleCanvasMouseDown, handleCanvasMouseMove } from './mouse-handlers.j
 
 // Initialize the application
 function init() {
+  // Check if intro screen should be shown
+  const introScreen = document.getElementById('intro-screen');
+  const startBtn = document.getElementById('start-btn');
+  
+  // If intro screen exists, wait for start button click
+  if (introScreen && startBtn) {
+    startBtn.addEventListener('click', () => {
+      introScreen.classList.add('hidden');
+      // Initialize the app after intro animation
+      setTimeout(() => {
+        initApp();
+      }, 500);
+    });
+  } else {
+    // No intro screen, initialize immediately
+    initApp();
+  }
+}
+
+// Initialize the main app (called after intro or immediately)
+function initApp() {
   // Create UI buttons from JS modules (instead of HTML)
   createTopToolbar();
   createLeftToolbar();
@@ -29,6 +50,14 @@ function init() {
   createTimelineControls();
 
   initializeElements();
+  
+  // Add deferred file input after elements are initialized
+  if (window._deferredFileInput) {
+    document.body.appendChild(window._deferredFileInput);
+    elements.fileInput = window._deferredFileInput;
+    delete window._deferredFileInput;
+  }
+  
   setupCanvas();
   initCursors();
 
