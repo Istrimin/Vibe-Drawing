@@ -40,6 +40,9 @@ function drawGrid() {
   state.ctx.strokeStyle = state.gridColor;
   state.ctx.lineWidth = 0.5;
 
+  // Use effective grid size (accounts for upscale)
+  const effectiveGridSize = state.gridSize * state.gridUpscale;
+
   // Calculate visible area
   const visibleWidth = state.canvas.width / state.zoomLevel;
   const visibleHeight = state.canvas.height / state.zoomLevel;
@@ -49,10 +52,10 @@ function drawGrid() {
   const endY = startY + visibleHeight;
 
   // Draw vertical lines - infinite in both directions
-  const firstVerticalLine = Math.floor(startX / state.gridSize) * state.gridSize;
-  const lastVerticalLine = Math.ceil(endX / state.gridSize) * state.gridSize;
+  const firstVerticalLine = Math.floor(startX / effectiveGridSize) * effectiveGridSize;
+  const lastVerticalLine = Math.ceil(endX / effectiveGridSize) * effectiveGridSize;
 
-  for (let x = firstVerticalLine; x <= lastVerticalLine; x += state.gridSize) {
+  for (let x = firstVerticalLine; x <= lastVerticalLine; x += effectiveGridSize) {
     state.ctx.beginPath();
     state.ctx.moveTo(x, startY);
     state.ctx.lineTo(x, endY);
@@ -60,10 +63,10 @@ function drawGrid() {
   }
 
   // Draw horizontal lines - infinite in both directions
-  const firstHorizontalLine = Math.floor(startY / state.gridSize) * state.gridSize;
-  const lastHorizontalLine = Math.ceil(endY / state.gridSize) * state.gridSize;
+  const firstHorizontalLine = Math.floor(startY / effectiveGridSize) * effectiveGridSize;
+  const lastHorizontalLine = Math.ceil(endY / effectiveGridSize) * effectiveGridSize;
 
-  for (let y = firstHorizontalLine; y <= lastHorizontalLine; y += state.gridSize) {
+  for (let y = firstHorizontalLine; y <= lastHorizontalLine; y += effectiveGridSize) {
     state.ctx.beginPath();
     state.ctx.moveTo(startX, y);
     state.ctx.lineTo(endX, y);

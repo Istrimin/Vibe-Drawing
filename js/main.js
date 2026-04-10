@@ -13,42 +13,55 @@ import { undo, redo, saveState, startPlayback, stopPlayback, pausePlayback, resu
 function init() {
   initializeElements();
   setupCanvas();
-  setupEventListeners();
   initCursors();
-  // setupCursorKeyboardShortcuts(); // Disabled to prevent conflicts with system tabs
-  setupUI();
-  loadState();
   
-  // Center the view - calculate pan offset to center the grid
+  // Center the view FIRST - before setupUI and loadState
+  // This ensures symmetry center is correct
   if (state.canvas && state.canvas.width > 0 && state.canvas.height > 0) {
     const centerX = state.canvas.width / 2;
     const centerY = state.canvas.height / 2;
     state.panOffset.x = centerX;
     state.panOffset.y = centerY;
   }
+
+  // Set initial mode BEFORE loadState (so loadState can override if needed)
+  state.drawingMode = 'grid';
+  state.selectionTool = 'grid-draw';
+  state.showGrid = true;
+
+  // Load saved state (may override some settings)
+  loadState();
+
+  // RE-APPLY grid mode after loadState (ensure it's always grid mode on start)
+  state.drawingMode = 'grid';
+  state.selectionTool = 'grid-draw';
+  state.showGrid = true;
   
+  // Update UI for grid mode
+  elements.modeToggleBtn.classList.add('active');
+  elements.app.classList.add('mode-grid');
+  
+  const gridBtn = document.getElementById('gridBtn');
+  if (gridBtn) {
+    gridBtn.setAttribute('data-active', 'true');
+    gridBtn.classList.add('active');
+  }
+
+  // Activate grid-draw tool button
+  const gridDrawBtn = document.querySelector('.tool-btn[data-tool="grid-draw"]');
+  if (gridDrawBtn) {
+    updateActiveTool(gridDrawBtn);
+  }
+
+  setupEventListeners();
+  setupUI();
+
   updateStatusBar('Ready');
   updateColorIndicator();
-  
-  // Set initial mode button state based on default drawing mode
-  if (state.drawingMode === 'grid') {
-    elements.modeToggleBtn.classList.add('active');
-    elements.app.classList.add('mode-grid');
-    state.selectionTool = 'grid-draw';
-    updateActiveTool('grid-draw');
-    state.showGrid = true;
-    const gridBtn = document.getElementById('gridBtn');
-    if (gridBtn) {
-      gridBtn.setAttribute('data-active', 'true');
-      gridBtn.classList.add('active');
-    }
-  } else {
-    elements.modeToggleBtn.classList.remove('active');
-  }
-  
+
   // Hide/show tools based on initial mode
   updateToolsForMode();
-  
+
   redrawCanvas();
 }
 
@@ -195,7 +208,25 @@ function setupEventListeners() {
   elements.gridBrushSizeSlider.addEventListener('input', (e) => {
     state.gridBrushSize = parseInt(e.target.value, 10);
     elements.gridBrushSizeValue.textContent = e.target.value;
+    // Sync with right panel slider
+    if (elements.rightGridBrushSlider) {
+      elements.rightGridBrushSlider.value = e.target.value;
+      elements.rightGridBrushValue.textContent = e.target.value;
+    }
   });
+
+  // Right panel grid brush size slider
+  if (elements.rightGridBrushSlider) {
+    elements.rightGridBrushSlider.addEventListener('input', (e) => {
+      state.gridBrushSize = parseInt(e.target.value, 10);
+      elements.rightGridBrushValue.textContent = e.target.value;
+      // Sync with top panel slider
+      if (elements.gridBrushSizeSlider) {
+        elements.gridBrushSizeSlider.value = e.target.value;
+        elements.gridBrushSizeValue.textContent = e.target.value;
+      }
+    });
+  }
 
   const gridEraserSizeSlider = document.getElementById('gridEraserSizeSlider');
   const gridEraserSizeValue = document.getElementById('gridEraserSizeValue');
@@ -469,17 +500,23 @@ function setupEventListeners() {
 function setupUI() {
   updateActiveTool(document.querySelector('.tool-btn.active'));
 
+  // Initialize right panel grid brush slider
+  if (elements.rightGridBrushSlider) {
+    elements.rightGridBrushSlider.value = state.gridBrushSize;
+    elements.rightGridBrushValue.textContent = state.gridBrushSize;
+  }
 
-
-  // Set initial cursor based on default tool
-  if (state.selectionTool === 'pencil') {
+  // Set initial cursor based on default tool (grid-draw is default)
+  if (state.selectionTool === 'grid-draw') {
+    elements.canvas.style.cursor = 'crosshair';
+  } else if (state.selectionTool === 'pencil') {
     setPencilCursor();
   } else if (state.selectionTool === 'eraser') {
     setEraserCursor();
   } else if (state.selectionTool === 'pipette') {
     setPipetteCursor();
-  } else if (state.selectionTool === 'grid-draw') {
-    elements.canvas.style.cursor = 'crosshair';
+  } else {
+    resetCursor();
   }
 
   // Disable context menu on color pickers
@@ -709,19 +746,20 @@ function handleCanvasMouseDown(e) {
     saveState();
     const effectiveGridSize = state.gridSize * state.gridUpscale;
 
-    state.lastGridCell = { x: Math.floor(pos.x / effectiveGridSize) * effectiveGridSize, y: Math.floor(pos.y / effectiveGridSize) * effectiveGridSize };
+    // Snap position to effective grid (upscaled cells)
+    const snappedX = Math.floor(pos.x / effectiveGridSize) * effectiveGridSize;
+    const snappedY = Math.floor(pos.y / effectiveGridSize) * effectiveGridSize;
+    
+    state.lastGridCell = { x: snappedX, y: snappedY };
     state.lastGridMousePos = { x: pos.x, y: pos.y };
 
     if (e.button === 0) { // Left-click to fill grid cell
-      // Simple implementation: use grid brush size to determine area
       const brushSize = state.gridBrushSize;
-      // For simplicity, we'll just draw a square area around the clicked cell
-      // This avoids complex calculations and performance issues
       const halfSize = Math.floor(brushSize / 2);
       const centerX = state.lastGridCell.x;
       const centerY = state.lastGridCell.y;
-      
-      // Draw a square area of size brushSize x brushSize
+
+      // Draw cells using effectiveGridSize (all cells same size)
       for (let dx = -halfSize; dx <= halfSize; dx++) {
         for (let dy = -halfSize; dy <= halfSize; dy++) {
           const cellX = centerX + dx * effectiveGridSize;
@@ -751,12 +789,12 @@ function handleCanvasMouseDown(e) {
       const halfSize = Math.floor(eraserSize / 2);
       const centerX = state.lastGridCell.x;
       const centerY = state.lastGridCell.y;
-      
-      // Erase a square area of size eraserSize x eraserSize - use BASE gridSize for position
+
+      // Erase a square area using effectiveGridSize
       for (let dx = -halfSize; dx <= halfSize; dx++) {
         for (let dy = -halfSize; dy <= halfSize; dy++) {
-          const cellX = centerX + dx * state.gridSize;
-          const cellY = centerY + dy * state.gridSize;
+          const cellX = centerX + dx * effectiveGridSize;
+          const cellY = centerY + dy * effectiveGridSize;
           // Remove the cell and its symmetric counterparts if symmetry is active
           if (state.symmetry.isActive()) {
             const cellsToRemove = state.symmetry.transformGridCells([{ x: cellX, y: cellY, color: '' }], state.gridSize);
@@ -888,36 +926,30 @@ function handleCanvasMouseMove(e) {
   if (state.isDrawing) {
     // Grid Draw continuous
     if (state.selectionTool === 'grid-draw') {
-        // Use BASE gridSize for cell position calculation
-        const baseGridSize = state.gridSize;
+        const effectiveGridSize = state.gridSize * state.gridUpscale;
 
         // Use interpolation between last mouse position and current position
-        // to fill all cells that the mouse passed through - use base grid
+        // to fill all cells that the mouse passed through
         if (state.lastGridMousePos && (state.lastGridMousePos.x !== pos.x || state.lastGridMousePos.y !== pos.y)) {
             const cells = getCellsBetweenPoints(
                 state.lastGridMousePos.x,
                 state.lastGridMousePos.y,
                 pos.x,
                 pos.y,
-                baseGridSize
+                effectiveGridSize
             );
 
-            // Determine brush size for grid drawing
-            const brushSize = state.gridBrushSize;
-            const brushRadius = Math.max(0, Math.floor((brushSize - 1) / 2)); // Radius in grid cells
-
             for (const cell of cells) {
-                // For grid drawing, we'll apply the brush size to determine the area
+                // Fill a square area around the cell - use effectiveGridSize
                 if (e.buttons === 1) { // Left mouse button (fill)
-                    // Simple implementation: fill a square area around the cell - use base gridSize
                     const brushSize = state.gridBrushSize;
                     const halfSize = Math.floor(brushSize / 2);
                     const centerX = cell.x;
                     const centerY = cell.y;
                     for (let dx = -halfSize; dx <= halfSize; dx++) {
                       for (let dy = -halfSize; dy <= halfSize; dy++) {
-                        const filledX = centerX + dx * baseGridSize;
-                        const filledY = centerY + dy * baseGridSize;
+                        const filledX = centerX + dx * effectiveGridSize;
+                        const filledY = centerY + dy * effectiveGridSize;
                         const existingCellIndex = state.gridCells.findIndex(c => c.x === filledX && c.y === filledY);
                         if (existingCellIndex !== -1) {
                           state.gridCells[existingCellIndex].color = state.drawingColor;
@@ -938,15 +970,15 @@ function handleCanvasMouseMove(e) {
                       }
                     }
                 } else if (e.buttons === 2) { // Right mouse button (erase)
-                    // Simple implementation: erase a square area around the cell - use base gridSize
+                    // Erase a square area around the cell - use effectiveGridSize
                     const eraserSize = state.gridEraserSize;
                     const halfSize = Math.floor(eraserSize / 2);
                     const centerX = cell.x;
                     const centerY = cell.y;
                     for (let dx = -halfSize; dx <= halfSize; dx++) {
                       for (let dy = -halfSize; dy <= halfSize; dy++) {
-                        const erasedX = centerX + dx * baseGridSize;
-                        const erasedY = centerY + dy * baseGridSize;
+                        const erasedX = centerX + dx * effectiveGridSize;
+                        const erasedY = centerY + dy * effectiveGridSize;
                         // Remove the cell and its symmetric counterparts if symmetry is active
                         if (state.symmetry.isActive()) {
                           const cellsToRemove = state.symmetry.transformGridCells([{ x: erasedX, y: erasedY, color: '' }], state.gridSize);
@@ -964,8 +996,8 @@ function handleCanvasMouseMove(e) {
                 }
             }
 
-            // Update last cell to the current cell - use base gridSize
-            state.lastGridCell = { x: Math.floor(pos.x / baseGridSize) * baseGridSize, y: Math.floor(pos.y / baseGridSize) * baseGridSize };
+            // Update last cell to the current cell - use effectiveGridSize
+            state.lastGridCell = { x: Math.floor(pos.x / effectiveGridSize) * effectiveGridSize, y: Math.floor(pos.y / effectiveGridSize) * effectiveGridSize };
             state.lastGridMousePos = { x: pos.x, y: pos.y };
             redrawCanvas();
         }
@@ -1392,6 +1424,9 @@ function saveProjectState() {
     images: state.images,
     drawingPaths: state.drawingPaths,
     gridCells: gridCellsToSave,
+    drawingMode: state.drawingMode, // Save drawing mode
+    panOffset: { ...state.panOffset }, // Save pan offset
+    zoomLevel: state.zoomLevel, // Save zoom level
     // Also save the current symmetry state
     symmetry: {
       mode: state.symmetry.mode,
@@ -1412,6 +1447,19 @@ function loadState() {
     state.images = parsedState.images || [];
     state.drawingPaths = parsedState.drawingPaths || [];
     state.gridCells = parsedState.gridCells || [];
+
+    // Restore drawing mode if saved
+    if (parsedState.drawingMode) {
+      state.drawingMode = parsedState.drawingMode;
+    }
+
+    // Restore pan offset and zoom if saved
+    if (parsedState.panOffset) {
+      state.panOffset = parsedState.panOffset;
+    }
+    if (parsedState.zoomLevel) {
+      state.zoomLevel = parsedState.zoomLevel;
+    }
 
     // Restore symmetry state if it was saved
     if (parsedState.symmetry) {

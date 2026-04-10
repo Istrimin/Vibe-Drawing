@@ -129,8 +129,8 @@ html, body {
 /* Mode toggle button - changes icon based on mode */
 .mode-toggle-btn {
     width: 28px; height: 28px;
-    background: #7b61ff;
-    border: none;
+    background: #555;
+    border: 2px solid #666;
     border-radius: 4px;
     cursor: pointer;
     display: flex;
@@ -138,9 +138,19 @@ html, body {
     justify-content: center;
     position: relative;
     padding: 0;
+    transition: all 0.2s ease;
+}
+.mode-toggle-btn:hover {
+    background: #666;
+    border-color: #777;
+}
+.mode-toggle-btn.active {
+    background: #7b61ff;
+    border-color: #9b81ff;
+    box-shadow: 0 0 8px rgba(123, 97, 255, 0.6);
 }
 .mode-toggle-btn svg {
-    width: 14px; height: 14px;
+    width: 16px; height: 16px;
     position: absolute;
 }
 .mode-toggle-btn .icon-grid {
@@ -180,10 +190,6 @@ html, body {
     z-index: 1000;
     transition: transform 0.3s ease;
     overflow-y: auto;
-    padding-top: 32px; /* Space for compact top toolbar */
-}
-#app.top-toolbar-hidden #left-toolbar,
-#app.top-toolbar-hidden #right-toolbar {
     padding-top: 0;
 }
 
@@ -266,17 +272,31 @@ html, body {
 }
 .tool-btn:hover { background-color: #333; }
 .tool-btn.active { background-color: #7b61ff; color: white; }
-.tool-btn svg { width: 14px; height: 14px; }
+.tool-btn svg { width: 18px; height: 18px; }
+#right-toolbar .tool-btn svg { width: 16px; height: 16px; }
+.timeline-controls .tool-btn svg { width: 12px; height: 12px; }
 
 /* Settings (vertical ones in sidebars) */
 .tool-setting {
     display: flex; flex-direction: column; align-items: center;
     justify-content: center; width: 100%; gap: 2px; margin-bottom: 3px;
 }
+.tool-setting label { font-size: 8px; color: #999; margin-bottom: 1px; }
 .tool-setting input[type="number"] {
     background-color: #111; color: #eee; border: 1px solid #333;
     border-radius: 3px; width: 32px; padding: 2px; text-align: center; font-size: 10px;
 }
+.tool-setting input[type="range"] {
+    -webkit-appearance: none; appearance: none;
+    width: 36px; height: 3px; background: #444;
+    outline: none; border-radius: 2px;
+}
+.tool-setting input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none; appearance: none;
+    width: 8px; height: 8px; background: #7b61ff;
+    cursor: pointer; border-radius: 50%;
+}
+.tool-setting span { font-size: 8px; color: #7b61ff; width: 20px; text-align: center; font-weight: bold; }
 input#gridColorPicker { width: 24px; height: 24px; }
 input#backgroundColorPicker { width: 24px; height: 24px; }
 
@@ -511,10 +531,6 @@ input#backgroundColorPicker { width: 24px; height: 24px; }
     height: 20px;
     background: #333;
     border-radius: 3px;
-}
-.timeline-controls .tool-btn svg {
-    width: 12px;
-    height: 12px;
 }
 
 .timeline-btn {

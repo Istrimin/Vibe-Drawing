@@ -89,6 +89,8 @@ export function initializeElements() {
   elements.eraserSizeValue = document.getElementById('eraserSizeValue');
   elements.gridBrushSizeSlider = document.getElementById('gridBrushSizeSlider');
   elements.gridBrushSizeValue = document.getElementById('gridBrushSizeValue');
+  elements.rightGridBrushSlider = document.getElementById('rightGridBrushSlider');
+  elements.rightGridBrushValue = document.getElementById('rightGridBrushValue');
   elements.gridUpscaleSelect = document.getElementById('gridUpscaleSelect');
   elements.modeToggleBtn = document.getElementById('modeToggleBtn');
   elements.symmetryBtn = document.getElementById('symmetryBtn');
