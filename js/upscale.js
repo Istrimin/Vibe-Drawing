@@ -1,12 +1,12 @@
 import { state } from './state.js';
 import { redrawCanvas } from './canvas.js';
+import { updateStatusBar } from './ui.js';
 
 /**
  * Upscale Module - Scales the drawn content by 2x
  *
- * When clicked, all existing cell coordinates and sizes are multiplied by 2.
- * This allows drawing finer details on top of upscaled content.
- * Undo saves the state before upscale.
+ * Each grid cell becomes a 2x2 block of cells (same visual size, but 4x cell count).
+ * The drawing visually doubles in size.
  */
 
 function scaleBy2x(saveState) {
@@ -18,40 +18,63 @@ function scaleBy2x(saveState) {
   saveState();
 
   const gridSize = state.gridSize;
-  const newCells = [];
 
-  // Each cell becomes 4 cells (2x2 grid) - convert to grid indices first
+  // Calculate center of content before upscale
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
   for (const cell of state.gridCells) {
-    const gridX = Math.round(cell.x / gridSize);
-    const gridY = Math.round(cell.y / gridSize);
+    if (cell.x < minX) minX = cell.x;
+    if (cell.y < minY) minY = cell.y;
+    if (cell.x > maxX) maxX = cell.x;
+    if (cell.y > maxY) maxY = cell.y;
+  }
+  const centerX = (minX + maxX) / 2;
+  const centerY = (minY + maxY) / 2;
 
-    // 4 cells: original positions doubled + half-step offset
-    const positions = [
-      { x: gridX * 2 * gridSize, y: gridY * 2 * gridSize },
-      { x: (gridX * 2 + 1) * gridSize, y: gridY * 2 * gridSize },
-      { x: gridX * 2 * gridSize, y: (gridY * 2 + 1) * gridSize },
-      { x: (gridX * 2 + 1) * gridSize, y: (gridY * 2 + 1) * gridSize }
-    ];
+  const newCells = [];
+  const seen = new Set();
 
-    for (const pos of positions) {
-      newCells.push({
-        x: pos.x,
-        y: pos.y,
-        color: cell.color
-      });
+  // Each cell becomes a 2x2 block
+  for (const cell of state.gridCells) {
+    const gx = Math.round(cell.x / gridSize);
+    const gy = Math.round(cell.y / gridSize);
+
+    // 2x2 block at double resolution
+    for (let dx = 0; dx < 2; dx++) {
+      for (let dy = 0; dy < 2; dy++) {
+        const nx = (gx * 2 + dx) * gridSize;
+        const ny = (gy * 2 + dy) * gridSize;
+        const key = `${nx},${ny}`;
+        if (!seen.has(key)) {
+          seen.add(key);
+          newCells.push({ x: nx, y: ny, color: cell.color });
+        }
+      }
     }
   }
 
-  // Deduplicate cells
-  const seen = new Set();
-  state.gridCells = newCells.filter(cell => {
-    const key = `${cell.x},${cell.y}`;
-    if (seen.has(key)) return false;
-    seen.add(key);
-    return true;
-  });
+  // Calculate new center after upscale
+  let newMinX = Infinity, newMinY = Infinity, newMaxX = -Infinity, newMaxY = -Infinity;
+  for (const cell of newCells) {
+    if (cell.x < newMinX) newMinX = cell.x;
+    if (cell.y < newMinY) newMinY = cell.y;
+    if (cell.x > newMaxX) newMaxX = cell.x;
+    if (cell.y > newMaxY) newMaxY = cell.y;
+  }
+  const newCenterX = (newMinX + newMaxX) / 2;
+  const newCenterY = (newMinY + newMaxY) / 2;
+
+  // Shift all cells so center stays the same
+  const offsetX = Math.round(centerX - newCenterX);
+  const offsetY = Math.round(centerY - newCenterY);
+  for (const cell of newCells) {
+    cell.x += offsetX;
+    cell.y += offsetY;
+  }
+
+  state.gridCells = newCells;
 
   redrawCanvas();
+  updateStatusBar(`Upscaled 2x (${newCells.length} cells)`);
 }
 
 export { scaleBy2x };
