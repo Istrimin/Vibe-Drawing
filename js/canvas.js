@@ -175,11 +175,27 @@ function redrawCanvas() {
     state.ctx.stroke();
   }
 
-  // Draw grid cells
-  state.gridCells.forEach(cell => {
-    state.ctx.fillStyle = cell.color;
-    state.ctx.fillRect(cell.x, cell.y, state.gridSize, state.gridSize);
-  });
+  // Draw grid cells (optimized: visible area culling + color batching)
+  const gs = state.gridSize;
+  const visStartX = -state.panOffset.x / state.zoomLevel;
+  const visStartY = -state.panOffset.y / state.zoomLevel;
+  const visEndX = visStartX + state.canvas.width / state.zoomLevel;
+  const visEndY = visStartY + state.canvas.height / state.zoomLevel;
+
+  const cellsByColor = new Map();
+  for (let i = 0; i < state.gridCells.length; i++) {
+    const cell = state.gridCells[i];
+    if (cell.x + gs < visStartX || cell.x > visEndX || cell.y + gs < visStartY || cell.y > visEndY) continue;
+    if (!cellsByColor.has(cell.color)) cellsByColor.set(cell.color, []);
+    cellsByColor.get(cell.color).push(cell);
+  }
+
+  for (const [color, cells] of cellsByColor) {
+    state.ctx.fillStyle = color;
+    for (let j = 0; j < cells.length; j++) {
+      state.ctx.fillRect(cells[j].x, cells[j].y, gs, gs);
+    }
+  }
 
   // Draw images (cached for performance)
   state.images.forEach(img => {

@@ -64,6 +64,7 @@ export function undo() {
             state.images = [];
             state.drawingPaths = [];
             state.gridCells = [];
+            state._gridCellsSet = null;
             state.selectedImage = null;
             state.selectedObjects = [];
             state.zoomLevel = 1;
@@ -74,6 +75,7 @@ export function undo() {
             state.images = JSON.parse(JSON.stringify(previousState.images));
             state.drawingPaths = JSON.parse(JSON.stringify(previousState.drawingPaths));
             state.gridCells = JSON.parse(JSON.stringify(previousState.gridCells));
+            state._gridCellsSet = null;
             state.selectedImage = previousState.selectedImage;
             state.selectedObjects = JSON.parse(JSON.stringify(previousState.selectedObjects));
             state.zoomLevel = previousState.zoomLevel;
@@ -110,6 +112,7 @@ export function redo() {
         state.images = JSON.parse(JSON.stringify(nextState.images));
         state.drawingPaths = JSON.parse(JSON.stringify(nextState.drawingPaths));
         state.gridCells = JSON.parse(JSON.stringify(nextState.gridCells));
+        state._gridCellsSet = null;
         state.selectedImage = nextState.selectedImage;
         state.selectedObjects = JSON.parse(JSON.stringify(nextState.selectedObjects));
         state.zoomLevel = nextState.zoomLevel;

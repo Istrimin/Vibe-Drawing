@@ -20,6 +20,12 @@ function scheduleRedraw() {
   }
 }
 
+// Grid cells lookup Set for O(1) performance
+function getGridCellKey(x, y) { return x + "," + y; }
+function buildGridCellsSet() {
+  state._gridCellsSet = new Set(state.gridCells.map(cell => getGridCellKey(cell.x, cell.y)));
+}
+
 // --- Functions that were in script.js ---
 
 // Initialize the application
@@ -41,6 +47,9 @@ function init() {
   state.drawingMode = 'grid';
   state.selectionTool = 'grid-draw';
   state.showGrid = true;
+
+  // Load settings (lightweight, always)
+  loadSettings();
 
   // Load saved state (may override some settings)
   loadState();
@@ -462,7 +471,7 @@ function setupEventListeners() {
         elements.symmetryPanel.classList.add('hidden');
 
         // Save state to persist symmetry mode across sessions
-        saveProjectState(true);
+        saveSettings();
 
         // Visual feedback
         const modeLabel = mode === 'off' ? 'Guide only' : mode.charAt(0).toUpperCase() + mode.slice(1);
@@ -474,7 +483,7 @@ function setupEventListeners() {
   elements.radialRayCountInput.addEventListener('input', (e) => {
       const count = parseInt(e.target.value, 10);
       state.symmetry.setRays(count);
-      saveProjectState(true);
+      saveSettings();
   });
 
   // Listen to symmetry line visibility changes
@@ -482,14 +491,14 @@ function setupEventListeners() {
     elements.showSymmetryLineCb.addEventListener('change', (e) => {
       state.showSymmetryLine = e.target.checked;
       redrawCanvas();
-      saveProjectState(true);
+      saveSettings();
     });
   }
 
   // Grid button toggle - save state
   if (elements.gridBtn) {
     elements.gridBtn.addEventListener('click', () => {
-      saveProjectState(true);
+      saveSettings();
     });
   }
 
@@ -921,6 +930,8 @@ function handleCanvasMouseDown(e) {
   // Grid Draw Tool Handling (Left-click to draw, Right-click to erase)
   if (state.selectionTool === 'grid-draw') {
     state.isDrawing = true; // Start drawing state for grid
+    // Build fast lookup Set
+    if (!state._gridCellsSet) buildGridCellsSet();
     // Save state BEFORE making changes for proper undo
     saveState();
 
@@ -942,21 +953,24 @@ function handleCanvasMouseDown(e) {
         for (let dy = -halfSize; dy <= halfSize; dy++) {
           const cellX = centerX + dx * state.gridSize;
           const cellY = centerY + dy * state.gridSize;
-          const existingCellIndex = state.gridCells.findIndex(cell => cell.x === cellX && cell.y === cellY);
-          if (existingCellIndex !== -1) {
-            state.gridCells[existingCellIndex].color = state.drawingColor;
+          const cellKey = getGridCellKey(cellX, cellY);
+          if (state._gridCellsSet.has(cellKey)) {
+            const existingCell = state.gridCells.find(cc => cc.x === cellX && cc.y === cellY);
+            if (existingCell) existingCell.color = state.drawingColor;
           } else {
             const newCell = { x: cellX, y: cellY, color: state.drawingColor };
+            state._gridCellsSet.add(cellKey);
             state.gridCells.push(newCell);
-            // Add symmetric cells
             if (state.symmetry.isActive()) {
               const symmetric = state.symmetry.transformGridCells([newCell], state.gridSize);
-              symmetric.shift(); // remove original
-              symmetric.forEach(s => {
-                if (!state.gridCells.some(c => c.x === s.x && c.y === s.y)) {
+              symmetric.shift();
+              for (const s of symmetric) {
+                const sKey = getGridCellKey(s.x, s.y);
+                if (!state._gridCellsSet.has(sKey)) {
+                  state._gridCellsSet.add(sKey);
                   state.gridCells.push(s);
                 }
-              });
+              }
             }
           }
         }
@@ -975,14 +989,19 @@ function handleCanvasMouseDown(e) {
           // Remove the cell and its symmetric counterparts if symmetry is active
           if (state.symmetry.isActive()) {
             const cellsToRemove = state.symmetry.transformGridCells([{ x: cellX, y: cellY, color: '' }], state.gridSize);
-            // Filter out all cells that match any of the symmetric positions
-            state.gridCells = state.gridCells.filter(c => {
-              return !cellsToRemove.some(toRemove =>
-                toRemove.x === c.x && toRemove.y === c.y
-              );
+            const toRemoveSet = new Set(cellsToRemove.map(cr => getGridCellKey(cr.x, cr.y)));
+            state.gridCells = state.gridCells.filter(cell => {
+              const k = getGridCellKey(cell.x, cell.y);
+              if (toRemoveSet.has(k)) {
+                state._gridCellsSet.delete(k);
+                return false;
+              }
+              return true;
             });
           } else {
-            state.gridCells = state.gridCells.filter(c => !(c.x === cellX && c.y === cellY));
+            const key = getGridCellKey(cellX, cellY);
+            state._gridCellsSet.delete(key);
+            state.gridCells = state.gridCells.filter(cell => getGridCellKey(cell.x, cell.y) !== key);
           }
         }
       }
@@ -1151,21 +1170,26 @@ function handleCanvasMouseMove(e) {
                       for (let dy = -halfSize; dy <= halfSize; dy++) {
                         const filledX = centerX + dx * state.gridSize;
                         const filledY = centerY + dy * state.gridSize;
-                        const existingCellIndex = state.gridCells.findIndex(c => c.x === filledX && c.y === filledY);
-                        if (existingCellIndex !== -1) {
-                          state.gridCells[existingCellIndex].color = state.drawingColor;
+                        // Fast Set-based lookup
+                        const cellKey = getGridCellKey(filledX, filledY);
+                        if (state._gridCellsSet.has(cellKey)) {
+                          const existingCell = state.gridCells.find(cc => cc.x === filledX && cc.y === filledY);
+                          if (existingCell) existingCell.color = state.drawingColor;
                         } else {
                           const newCell = { x: filledX, y: filledY, color: state.drawingColor };
+                          state._gridCellsSet.add(cellKey);
                           state.gridCells.push(newCell);
-                          // Add symmetric cells
+                          // Add symmetric cells with fast lookup
                           if (state.symmetry.isActive()) {
                             const symmetric = state.symmetry.transformGridCells([newCell], state.gridSize);
                             symmetric.shift(); // remove original
-                            symmetric.forEach(s => {
-                              if (!state.gridCells.some(c => c.x === s.x && c.y === s.y)) {
+                            for (const s of symmetric) {
+                              const sKey = getGridCellKey(s.x, s.y);
+                              if (!state._gridCellsSet.has(sKey)) {
+                                state._gridCellsSet.add(sKey);
                                 state.gridCells.push(s);
                               }
-                            });
+                            }
                           }
                         }
                       }
@@ -1183,14 +1207,19 @@ function handleCanvasMouseMove(e) {
                         // Remove the cell and its symmetric counterparts if symmetry is active
                         if (state.symmetry.isActive()) {
                           const cellsToRemove = state.symmetry.transformGridCells([{ x: erasedX, y: erasedY, color: '' }], state.gridSize);
-                          // Filter out all cells that match any of the symmetric positions
-                          state.gridCells = state.gridCells.filter(c => {
-                            return !cellsToRemove.some(toRemove =>
-                              toRemove.x === c.x && toRemove.y === c.y
-                            );
+                          const toRemoveSet = new Set(cellsToRemove.map(cr => getGridCellKey(cr.x, cr.y)));
+                          state.gridCells = state.gridCells.filter(cell => {
+                            const k = getGridCellKey(cell.x, cell.y);
+                            if (toRemoveSet.has(k)) {
+                              state._gridCellsSet.delete(k);
+                              return false;
+                            }
+                            return true;
                           });
                         } else {
-                          state.gridCells = state.gridCells.filter(c => !(c.x === erasedX && c.y === erasedY));
+                          const key = getGridCellKey(erasedX, erasedY);
+                          state._gridCellsSet.delete(key);
+                          state.gridCells = state.gridCells.filter(cell => getGridCellKey(cell.x, cell.y) !== key);
                         }
                       }
                     }
@@ -1623,7 +1652,7 @@ function updateAutoSave() {
   // Set new interval if enabled
   if (state.autoSaveEnabled) {
     state.autoSaveInterval = setInterval(() => {
-      saveProjectState(true); // silent save
+      saveSettings(); // silent save
     }, 30000); // 30 seconds
     updateStatusBar('Auto-save enabled (every 30s)');
   } else {
@@ -1631,6 +1660,27 @@ function updateAutoSave() {
   }
 }
 
+// Save only settings (not drawing data) to localStorage
+function saveSettings() {
+  const settings = {
+    drawingMode: state.drawingMode,
+    symmetry: {
+      mode: state.symmetry.mode,
+      radialRays: state.symmetry.radialRays
+    },
+    showSymmetryLine: state.showSymmetryLine,
+    autoSaveEnabled: state.autoSaveEnabled,
+    gridType: 'square',
+    gridTransformationMode: state.gridTransformationMode
+  };
+  try {
+    localStorage.setItem('vibeDrawingSettings', JSON.stringify(settings));
+  } catch(e) {
+    console.warn('Failed to save settings:', e);
+  }
+}
+
+// Save full state (including drawing data) - use for manual save only
 function saveProjectState(silent = false) {
   // When symmetry is active, save the expanded grid cells to make them permanent
   let gridCellsToSave = state.gridCells;
@@ -1642,31 +1692,54 @@ function saveProjectState(silent = false) {
     images: state.images,
     drawingPaths: state.drawingPaths,
     gridCells: gridCellsToSave,
-    drawingMode: state.drawingMode, // Save drawing mode
-    panOffset: { ...state.panOffset }, // Save pan offset
-    zoomLevel: state.zoomLevel, // Save zoom level
-    // Also save the current symmetry state
+    drawingMode: state.drawingMode,
+    panOffset: { ...state.panOffset },
+    zoomLevel: state.zoomLevel,
     symmetry: {
       mode: state.symmetry.mode,
       radialRays: state.symmetry.radialRays
     },
-    showSymmetryLine: state.showSymmetryLine, // Save symmetry line visibility
-    autoSaveEnabled: state.autoSaveEnabled, // Save auto-save setting
-    // Save grid type and other grid settings
+    showSymmetryLine: state.showSymmetryLine,
+    autoSaveEnabled: state.autoSaveEnabled,
     gridType: 'square',
     gridTransformationMode: state.gridTransformationMode
   };
-  console.log('[DEBUG saveProjectState] Saving symmetry mode:', stateToSave.symmetry);
-  localStorage.setItem('vibeDrawingState', JSON.stringify(stateToSave));
-  if (!silent) {
-    updateStatusBar('State saved');
+  try {
+    localStorage.setItem('vibeDrawingState', JSON.stringify(stateToSave));
+    if (!silent) {
+      updateStatusBar('State saved');
+    }
+  } catch(e) {
+    console.warn('localStorage quota exceeded:', e);
+    updateStatusBar('Save failed - localStorage full');
+  }
+}
+
+// Load only settings (not drawing data) from localStorage
+function loadSettings() {
+  const savedSettings = localStorage.getItem('vibeDrawingSettings');
+  if (savedSettings) {
+    try {
+      const parsed = JSON.parse(savedSettings);
+      if (parsed.drawingMode) state.drawingMode = parsed.drawingMode;
+      if (parsed.symmetry) {
+        state.symmetry.mode = parsed.symmetry.mode || 'off';
+        state.symmetry.radialRays = parsed.symmetry.radialRays || 8;
+      }
+      if (parsed.showSymmetryLine !== undefined) state.showSymmetryLine = parsed.showSymmetryLine;
+      if (parsed.autoSaveEnabled !== undefined) state.autoSaveEnabled = parsed.autoSaveEnabled;
+      if (parsed.gridTransformationMode) state.gridTransformationMode = parsed.gridTransformationMode;
+    } catch(e) {
+      console.warn('Failed to load settings:', e);
+    }
   }
 }
 
 function loadState() {
   const savedState = localStorage.getItem('vibeDrawingState');
   if (savedState) {
-    const parsedState = JSON.parse(savedState);
+    let parsedState;
+    try { parsedState = JSON.parse(savedState); } catch(e) { console.warn('Corrupt saved state, clearing:', e); localStorage.removeItem('vibeDrawingState'); return; }
     state.images = parsedState.images || [];
     state.drawingPaths = parsedState.drawingPaths || [];
     state.gridCells = parsedState.gridCells || [];
