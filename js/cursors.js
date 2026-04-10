@@ -41,7 +41,14 @@ export function initCursors() {
 
     // Set initial cursor
     if (drawingCanvas) {
-        drawingCanvas.style.cursor = cursorState.currentCursor;
+        // Restore saved cursor
+        const savedCursor = localStorage.getItem('vibeDrawingCursor');
+        if (savedCursor) {
+            cursorState.currentCursor = savedCursor;
+            drawingCanvas.style.cursor = savedCursor;
+        } else {
+            drawingCanvas.style.cursor = cursorState.currentCursor;
+        }
     }
 }
 
@@ -227,6 +234,8 @@ function setCursor(cursorValue) {
     if (drawingCanvas) {
         drawingCanvas.style.cursor = cursorValue;
     }
+    // Persist cursor choice
+    try { localStorage.setItem('vibeDrawingCursor', cursorValue); } catch(e) {}
 }
 
 // Toggle cursor panel visibility

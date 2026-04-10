@@ -44,52 +44,14 @@ export function floodErase(x, y) {
   }
 }
 
-// Erase all cells on the canvas
+// Erase all cells on the canvas — fast, no bounding box math
 function eraseAllCells() {
-  const { gridSize, gridCells } = state;
-  
-  if (gridCells.length === 0) {
-    // If no cells exist, nothing to erase
-    return;
-  }
-  
-  // Calculate the bounding box of all existing cells
-  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-  
-  for (const cell of gridCells) {
-    minX = Math.min(minX, cell.x);
-    minY = Math.min(minY, cell.y);
-    maxX = Math.max(maxX, cell.x);
-    maxY = Math.max(maxY, cell.y);
-  }
-  
-  // Define a canvas area to erase - expand the bounding box somewhat
-  const canvasBuffer = 20 * gridSize; // Buffer around existing cells
-  const canvasMinX = minX - canvasBuffer;
-  const canvasMaxX = maxX + canvasBuffer;
-  const canvasMinY = minY - canvasBuffer;
-  const canvasMaxY = maxY + canvasBuffer;
-  
-  // Create a set of positions that have cells for faster lookup
-  const filledSet = new Set();
-  for (const cell of gridCells) {
-    filledSet.add(`${cell.x},${cell.y}`);
-  }
-  
-  // Filter out all cells within the canvas area to erase them
-  const newGridCells = gridCells.filter(cell => {
-    // Keep cells that are outside the canvas area we're erasing
-    return cell.x < canvasMinX || cell.x > canvasMaxX ||
-           cell.y < canvasMinY || cell.y > canvasMaxY;
-  });
-  
-  // Replace the gridCells array with the filtered version
-  state.gridCells.splice(0, state.gridCells.length);
-  state.gridCells.push(...newGridCells);
+  state.gridCells.length = 0;
+  state._gridCellsSet = null;
 }
 
 
-// Flood erase connected cells of the same color
+// Flood erase connected cells of the same color — optimized with Map lookup
 function gridFloodErase(startX, startY, targetColor) {
  const { gridSize, gridCells } = state;
   const startXGrid = Math.floor(startX / gridSize) * gridSize;
@@ -99,19 +61,26 @@ function gridFloodErase(startX, startY, targetColor) {
     return;
   }
 
+  // Build a Map for O(1) cell lookup
+  const cellMap = new Map();
+  for (let i = 0; i < gridCells.length; i++) {
+    cellMap.set(`${gridCells[i].x},${gridCells[i].y}`, i);
+  }
+
   const queue = [{ x: startXGrid, y: startYGrid }];
   const visited = new Set([`${startXGrid},${startYGrid}`]);
 
   while (queue.length > 0) {
     const { x, y } = queue.shift();
 
-    // Find and remove the cell at this position
-    const cellIndex = gridCells.findIndex(cell => cell.x === x && cell.y === y);
+    const key = `${x},${y}`;
+    const cellIndex = cellMap.get(key);
 
-    if (cellIndex !== -1) {
+    if (cellIndex !== undefined) {
       if (gridCells[cellIndex].color === targetColor) {
-        // Remove the cell from the array
-        gridCells.splice(cellIndex, 1);
+        // Remove the cell from the array (mark as null for O(1) removal)
+        gridCells[cellIndex] = null;
+        cellMap.delete(key);
       } else {
         continue;
       }
@@ -127,16 +96,21 @@ function gridFloodErase(startX, startY, targetColor) {
     ];
 
     for (const neighbor of neighbors) {
-      const key = `${neighbor.x},${neighbor.y}`;
-      if (!visited.has(key)) {
-        const neighborCell = gridCells.find(cell => cell.x === neighbor.x && cell.y === neighbor.y);
-        const neighborColor = neighborCell?.color;
-
-        if (neighborColor === targetColor) {
+      const nKey = `${neighbor.x},${neighbor.y}`;
+      if (!visited.has(nKey)) {
+        const neighborIndex = cellMap.get(nKey);
+        if (neighborIndex !== undefined && gridCells[neighborIndex] && gridCells[neighborIndex].color === targetColor) {
           queue.push(neighbor);
-          visited.add(key);
+          visited.add(nKey);
         }
       }
+    }
+  }
+
+  // Compact the array — remove null entries
+  for (let i = gridCells.length - 1; i >= 0; i--) {
+    if (gridCells[i] === null) {
+      gridCells.splice(i, 1);
     }
   }
 }

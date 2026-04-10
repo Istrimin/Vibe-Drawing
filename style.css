@@ -72,9 +72,12 @@ html, body {
 .tool-setting-horizontal label { font-size: 16px; color: #999; cursor: default; }
 .tool-setting-horizontal.setting-grid { display: none; }
 .tool-setting-horizontal.setting-normal { display: flex; }
+.tool-setting-horizontal.no-mode { display: flex; }
 /* When grid mode is active, show grid settings, hide normal */
 #app.mode-grid .tool-setting-horizontal.setting-grid { display: flex; }
 #app.mode-grid .tool-setting-horizontal.setting-normal { display: none; }
+/* no-mode always visible in any mode */
+#app.mode-grid .tool-setting-horizontal.no-mode { display: flex; }
 .tool-setting-horizontal input[type="range"] {
     -webkit-appearance: none; appearance: none;
     width: 60px; height: 3px; background: #444;

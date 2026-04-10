@@ -7,13 +7,19 @@ export function createTopToolbar() {
     const topToolbar = document.getElementById('top-toolbar');
     if (!topToolbar) return;
 
-    // Brush size
-    const brushSetting = createSetting('brushSizeSlider', '✏️', 1, 100, 3);
+    // Brush size (normal mode only)
+    const brushSetting = document.createElement('div');
+    brushSetting.className = 'tool-setting-horizontal setting-normal';
+    brushSetting.innerHTML = `
+        <label for="brushSizeSlider">✏️</label>
+        <input type="range" id="brushSizeSlider" min="1" max="100" value="3">
+        <span id="brushSizeValue">3</span>
+    `;
     topToolbar.appendChild(brushSetting);
 
-    // Color picker
+    // Color picker (always visible)
     const colorSetting = document.createElement('div');
-    colorSetting.className = 'tool-setting-horizontal';
+    colorSetting.className = 'tool-setting-horizontal no-mode';
     colorSetting.innerHTML = `
         <label for="brushColorPicker">Color</label>
         <input type="color" id="brushColorPicker" value="#ffffff" data-tooltip="Brush Color">
@@ -45,18 +51,34 @@ export function createTopToolbar() {
         palette.appendChild(swatch);
     });
 
-    // Eraser size
-    const eraserSetting = createSetting('eraserSizeSlider', '🧹', 1, 200, 20);
+    // Eraser size (normal mode only)
+    const eraserSetting = document.createElement('div');
+    eraserSetting.className = 'tool-setting-horizontal setting-normal';
+    eraserSetting.innerHTML = `
+        <label for="eraserSizeSlider">🧹</label>
+        <input type="range" id="eraserSizeSlider" min="1" max="200" value="20">
+        <span id="eraserSizeValue">20</span>
+    `;
     topToolbar.appendChild(eraserSetting);
 
     // Grid eraser
-    const gridEraser = createSetting('gridEraserSizeSlider', '🧽', 1, 32, 1);
-    gridEraser.classList.add('setting-grid');
+    const gridEraser = document.createElement('div');
+    gridEraser.className = 'tool-setting-horizontal setting-grid';
+    gridEraser.innerHTML = `
+        <label for="gridEraserSizeSlider">🧽</label>
+        <input type="range" id="gridEraserSizeSlider" min="1" max="32" step="1" value="1">
+        <span id="gridEraserSizeValue">1</span>
+    `;
     topToolbar.appendChild(gridEraser);
 
     // Grid brush
-    const gridBrush = createSetting('gridBrushSizeSlider', '🖌️', 1, 32, 1);
-    gridBrush.classList.add('setting-grid');
+    const gridBrush = document.createElement('div');
+    gridBrush.className = 'tool-setting-horizontal setting-grid';
+    gridBrush.innerHTML = `
+        <label for="gridBrushSizeSlider">🖌️</label>
+        <input type="range" id="gridBrushSizeSlider" min="1" max="32" step="1" value="1">
+        <span id="gridBrushSizeValue">1</span>
+    `;
     topToolbar.appendChild(gridBrush);
 
     // Grid size (top)
@@ -74,15 +96,4 @@ export function createTopToolbar() {
     upscale.className = 'tool-setting-horizontal setting-grid';
     upscale.innerHTML = `<button id="upscaleBtn" data-tooltip="Увеличить рисунок в 2 раза">2x</button>`;
     topToolbar.appendChild(upscale);
-}
-
-function createSetting(id, label, min, max, value) {
-    const setting = document.createElement('div');
-    setting.className = 'tool-setting-horizontal setting-normal';
-    setting.innerHTML = `
-        <label for="${id}">${label}</label>
-        <input type="range" id="${id}" min="${min}" max="${max}" value="${value}">
-        <span id="${id.replace('Slider', 'Value')}">${value}</span>
-    `;
-    return setting;
 }
