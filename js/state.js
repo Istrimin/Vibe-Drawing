@@ -82,7 +82,6 @@ export function initializeElements() {
   elements.toolStatus = document.getElementById('toolStatus');
   elements.posStatus = document.getElementById('posStatus');
   elements.gridColorPicker = document.getElementById('gridColorPicker');
-  elements.gridSizeInput = document.getElementById('gridSizeInput');
   elements.backgroundColorPicker = document.getElementById('backgroundColorPicker');
   elements.brushSizeSlider = document.getElementById('brushSizeSlider');
   elements.brushSizeValue = document.getElementById('brushSizeValue');

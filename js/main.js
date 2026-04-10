@@ -399,16 +399,13 @@ function setupEventListeners() {
   elements.brushColorPicker.addEventListener('change', (e) => {
     state.drawingColor = e.target.value;
     updateColorIndicator();
-    // Update active swatch color and remove active from others
-    elements.colorPalette.querySelectorAll('.color-swatch').forEach(btn => {
-      btn.classList.remove('active');
-    });
-    // Update the visually active swatch to reflect new color
-    const activeSwatch = elements.colorPalette.querySelector('.color-swatch.active');
-    if (activeSwatch) {
-      activeSwatch.style.backgroundColor = e.target.value;
-      activeSwatch.dataset.color = e.target.value;
-      activeSwatch.classList.add('active');
+    // Update the first swatch to show the new color and make it active
+    const swatches = elements.colorPalette.querySelectorAll('.color-swatch');
+    swatches.forEach(btn => btn.classList.remove('active'));
+    if (swatches.length > 0) {
+      swatches[0].style.backgroundColor = e.target.value;
+      swatches[0].dataset.color = e.target.value;
+      swatches[0].classList.add('active');
     }
   });
 
@@ -421,6 +418,8 @@ function setupEventListeners() {
       // Update UI
       elements.colorPalette.querySelectorAll('.color-swatch').forEach(btn => btn.classList.remove('active'));
       e.target.classList.add('active');
+      // Update native color picker to match swatch
+      elements.brushColorPicker.value = color;
 
       updateStatusBar(`Color: ${color}`);
     }

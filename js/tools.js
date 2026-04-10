@@ -4,6 +4,18 @@ import { floodFill, floodErase } from './fill.js';
 import { getCellsBetweenPoints } from './geometry.js';
 import { saveState } from './history.js';
 
+// Throttled redraw to prevent excessive redraws during drawing
+let redrawPending = false;
+function throttledRedraw() {
+  if (!redrawPending) {
+    redrawPending = true;
+    requestAnimationFrame(() => {
+      redrawCanvas();
+      redrawPending = false;
+    });
+  }
+}
+
 export function getGridCellKey(x, y) { 
   return x + "," + y; 
 }
@@ -197,7 +209,7 @@ export function pencilDrawStart(pos) {
 
 export function pencilDrawMove(pos, buttons) {
   if (!state.isDrawing || state.selectionTool !== 'pencil') return;
-  
+
   if (buttons === 1) {
     state.currentPath.push({
       x: pos.x,
@@ -205,7 +217,7 @@ export function pencilDrawMove(pos, buttons) {
       size: state.drawingSize,
       color: state.drawingColor
     });
-    redrawCanvas();
+    throttledRedraw();
   }
 }
 
@@ -223,7 +235,7 @@ export function eraserDrawStart(pos) {
 
 export function eraserDrawMove(pos, buttons) {
   if (!state.isDrawing || state.selectionTool !== 'eraser') return;
-  
+
   if (buttons === 1) {
     state.currentPath.push({
       x: pos.x,
@@ -231,7 +243,7 @@ export function eraserDrawMove(pos, buttons) {
       size: state.eraserSize,
       color: state.backgroundColor
     });
-    redrawCanvas();
+    throttledRedraw();
   }
 }
 
