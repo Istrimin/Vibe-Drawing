@@ -128,10 +128,10 @@ html, body {
 
 /* Mode toggle button - changes icon based on mode */
 .mode-toggle-btn {
-    width: 28px; height: 28px;
+    width: 31px; height: 31px;
     background: #555;
     border: 2px solid #666;
-    border-radius: 4px;
+    border-radius: 5px;
     cursor: pointer;
     display: flex;
     align-items: center;
@@ -139,18 +139,32 @@ html, body {
     position: relative;
     padding: 0;
     transition: all 0.2s ease;
+    overflow: hidden;
+}
+.mode-toggle-btn::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(circle at center, rgba(255,255,255,0.15) 0%, transparent 70%);
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+.mode-toggle-btn:hover::before {
+    opacity: 1;
 }
 .mode-toggle-btn:hover {
     background: #666;
     border-color: #777;
+    transform: scale(1.05);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
 }
 .mode-toggle-btn.active {
-    background: #7b61ff;
+    background: linear-gradient(135deg, #9b81ff 0%, #7b61ff 100%);
     border-color: #9b81ff;
-    box-shadow: 0 0 8px rgba(123, 97, 255, 0.6);
+    box-shadow: 0 0 12px rgba(123, 97, 255, 0.7), inset 0 1px 0 rgba(255,255,255,0.2);
 }
 .mode-toggle-btn svg {
-    width: 16px; height: 16px;
+    width: 18px; height: 18px;
     position: absolute;
 }
 .mode-toggle-btn .icon-grid {
@@ -265,84 +279,121 @@ html, body {
 
 /* Buttons */
 .tool-btn {
-    width: 28px; height: 28px; border: none; background-color: transparent;
-    color: #ccc; cursor: pointer; border-radius: 3px;
+    width: 31px; height: 31px; border: none; background-color: #2a2a2a;
+    color: #ccc; cursor: pointer; border-radius: 4px;
     display: flex; align-items: center; justify-content: center;
     transition: all 0.2s ease;
+    position: relative;
+    overflow: hidden;
 }
-.tool-btn:hover { background-color: #333; }
-.tool-btn.active { background-color: #7b61ff; color: white; }
-.tool-btn svg { width: 18px; height: 18px; }
-#right-toolbar .tool-btn svg { width: 16px; height: 16px; }
+.tool-btn .btn-glow {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(circle at center, rgba(255,255,255,0.08) 0%, transparent 70%);
+    opacity: 0;
+    transition: opacity 0.2s ease;
+    pointer-events: none;
+}
+.tool-btn:hover .btn-glow,
+.tool-btn:hover::after {
+    opacity: 1;
+}
+.tool-btn:hover { 
+    background-color: #333333;
+    transform: scale(1.05);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+}
+.tool-btn.active { 
+    background: linear-gradient(135deg, #8b71ff 0%, #6b51ef 100%);
+    color: white;
+    box-shadow: 0 0 10px rgba(123, 97, 255, 0.5), inset 0 1px 0 rgba(255,255,255,0.2);
+    border: 1px solid rgba(255,255,255,0.1);
+}
+.tool-btn svg { width: 20px; height: 20px; pointer-events: none; }
+#right-toolbar .tool-btn svg { width: 18px; height: 18px; }
+#right-toolbar .tool-btn { width: 31px; height: 31px; }
 .timeline-controls .tool-btn svg { width: 12px; height: 12px; }
 
 /* Custom tooltips */
-.tool-btn {
-    position: relative;
-}
-.tool-btn::after {
-    content: attr(data-tooltip);
+.tool-btn .tooltip-text {
+    visibility: hidden;
+    opacity: 0;
     position: absolute;
-    bottom: calc(100% + 8px);
-    left: calc(50% + 8px);
+    bottom: calc(100% + 10px);
+    left: calc(50% + 10px);
     transform: translateX(-50%);
-    padding: 4px 8px;
-    background: #1a1a1a;
+    padding: 5px 9px;
+    background: #111111;
     color: #eee;
     font-size: 11px;
     white-space: nowrap;
     border-radius: 4px;
     border: 1px solid #444;
     pointer-events: none;
-    opacity: 0;
-    transition: opacity 0.15s ease;
-    z-index: 100;
+    transition: opacity 0.15s ease, visibility 0.15s ease;
+    z-index: 10000;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.5);
 }
-.tool-btn::before {
-    content: '';
+.tool-btn .tooltip-arrow {
+    visibility: hidden;
+    opacity: 0;
     position: absolute;
-    bottom: calc(100% + 4px);
-    left: calc(50% + 8px);
+    bottom: calc(100% + 5px);
+    left: calc(50% + 10px);
     transform: translateX(-50%);
     border: 5px solid transparent;
     border-top-color: #444;
     pointer-events: none;
-    opacity: 0;
-    transition: opacity 0.15s ease;
-    z-index: 100;
+    transition: opacity 0.15s ease, visibility 0.15s ease;
+    z-index: 10000;
 }
-.tool-btn:hover::after,
-.tool-btn:hover::before {
+.tool-btn:hover .tooltip-text,
+.tool-btn:hover .tooltip-arrow {
+    visibility: visible;
     opacity: 1;
 }
 
 /* Upscale button */
 .upscale-btn {
-    width: 28px;
-    height: 28px;
+    width: 31px;
+    height: 31px;
     border: none;
     background: linear-gradient(135deg, #9b81ff 0%, #7b61ff 100%);
     color: white;
     cursor: pointer;
-    border-radius: 4px;
+    border-radius: 5px;
     display: flex;
     align-items: center;
     justify-content: center;
     transition: all 0.2s ease;
-    box-shadow: 0 2px 4px rgba(123, 97, 255, 0.3);
+    box-shadow: 0 2px 6px rgba(123, 97, 255, 0.4);
+    position: relative;
+    overflow: hidden;
+}
+.upscale-btn::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(circle at center, rgba(255,255,255,0.2) 0%, transparent 70%);
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+.upscale-btn:hover::before {
+    opacity: 1;
 }
 .upscale-btn:hover {
     background: linear-gradient(135deg, #a894ff 0%, #8b71ff 100%);
-    box-shadow: 0 3px 6px rgba(123, 97, 255, 0.5);
-    transform: translateY(-1px);
+    box-shadow: 0 4px 10px rgba(123, 97, 255, 0.6);
+    transform: translateY(-2px) scale(1.05);
 }
 .upscale-btn:active {
-    transform: translateY(0);
-    box-shadow: 0 1px 2px rgba(123, 97, 255, 0.3);
+    transform: translateY(0) scale(1);
+    box-shadow: 0 2px 4px rgba(123, 97, 255, 0.4);
 }
 .upscale-btn svg {
-    width: 18px;
-    height: 18px;
+    width: 20px;
+    height: 20px;
 }
 
 /* Settings (vertical ones in sidebars) */
@@ -380,17 +431,24 @@ input#backgroundColorPicker { width: 24px; height: 24px; }
     position: absolute;
     top: 5px;
     right: 5px;
-    width: 28px;
-    height: 28px;
+    width: 31px;
+    height: 31px;
     background: #1e1e1e;
     border: 1px solid #333;
     color: #e0e0e0;
     z-index: 2001; /* Above everything */
-    border-radius: 4px;
+    border-radius: 5px;
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
+    transition: all 0.2s ease;
+}
+#toggle-panels-btn:hover {
+    background: #2a2a2a;
+    border-color: #444;
+    transform: scale(1.05);
+    box-shadow: 0 2px 6px rgba(0,0,0,0.3);
 }
 #main-menu {
     position: absolute;
@@ -866,22 +924,32 @@ input#backgroundColorPicker { width: 24px; height: 24px; }
     gap: 4px;
 }
 .color-swatch {
-    width: 20px;
-    height: 20px;
+    width: 22px;
+    height: 22px;
     border: 2px solid #444;
     border-radius: 50%; /* Circle shape */
     cursor: pointer;
-    transition: transform 0.1s ease, border-color 0.1s ease;
+    transition: transform 0.1s ease, border-color 0.1s ease, box-shadow 0.1s ease;
     padding: 0;
+    position: relative;
+    overflow: hidden;
+}
+.color-swatch::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(circle at 30% 30%, rgba(255,255,255,0.3) 0%, transparent 60%);
+    border-radius: 50%;
 }
 .color-swatch:hover {
-    transform: scale(1.1);
+    transform: scale(1.15);
     border-color: #777;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
 }
 .color-swatch.active {
     border-color: #fff;
-    box-shadow: 0 0 0 2px #7b61ff; /* Highlight active color */
-    transform: scale(1.15);
+    box-shadow: 0 0 0 2px #7b61ff, 0 0 12px rgba(123, 97, 255, 0.5);
+    transform: scale(1.2);
 }
 
 /* Disable context menu on color pickers */

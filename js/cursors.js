@@ -2,6 +2,7 @@
  * Cursor Management Module
  * Handles cursor selection and application
  */
+import { initTooltips } from './ui.js';
 
 // Cursor management state
 const cursorState = {
@@ -50,13 +51,31 @@ function createCursorPanelUI() {
     const rightToolGroup = document.querySelector('#right-toolbar .tool-group');
     if (rightToolGroup) {
         const cursorBtnHTML = `
-            <button class="tool-btn" id="changeCursorBtn" title="Change Cursor (C)">
+            <button class="tool-btn" id="changeCursorBtn" data-tooltip="Change Cursor (C)">
                 <svg width="20" height="20" viewBox="0 0 24 24">
-                    <path fill="currentColor" d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+                    <defs>
+                        <linearGradient id="cursorGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" style="stop-color:#FFD700;stop-opacity:1" />
+                            <stop offset="100%" style="stop-color:#FFA500;stop-opacity:0.8" />
+                        </linearGradient>
+                    </defs>
+                    <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z" fill="url(#cursorGrad)" opacity="0.85"/>
+                    <circle cx="12" cy="12" r="2" fill="white" opacity="0.9"/>
                 </svg>
             </button>
         `;
         rightToolGroup.insertAdjacentHTML('beforeend', cursorBtnHTML);
+        // Initialize tooltip for the newly created button
+        const newBtn = document.getElementById('changeCursorBtn');
+        if (newBtn) {
+            const tooltipText = document.createElement('span');
+            tooltipText.className = 'tooltip-text';
+            tooltipText.textContent = 'Change Cursor (C)';
+            newBtn.appendChild(tooltipText);
+            const tooltipArrow = document.createElement('span');
+            tooltipArrow.className = 'tooltip-arrow';
+            newBtn.appendChild(tooltipArrow);
+        }
     } else {
         console.warn('Could not find right toolbar tool group for cursor button');
     }

@@ -1,6 +1,6 @@
 import { state, elements, initializeElements } from './state.js';
 import { redrawCanvas, setupCanvas, zoom, clearCanvas } from './canvas.js';
-import { updateActiveTool, updateStatusBar, toggleGrid, showDevTools } from './ui.js';
+import { updateActiveTool, updateStatusBar, toggleGrid, showDevTools, initTooltips } from './ui.js';
 
 import { floodFill } from './fill.js';
 import { initCursors, setPipetteCursor, setPencilCursor, setEraserCursor, resetCursor } from './cursors.js';
@@ -33,6 +33,7 @@ function init() {
   initializeElements();
   setupCanvas();
   initCursors();
+  initTooltips();
   
   // Center the view FIRST - before setupUI and loadState
   // This ensures symmetry center is correct

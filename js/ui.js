@@ -2,6 +2,25 @@ import { elements, state } from './state.js';
 import { redrawCanvas } from './canvas.js';
 import { clearCanvas } from './canvas.js';
 
+// Initialize custom tooltips for all buttons with data-tooltip
+export function initTooltips() {
+  const buttons = document.querySelectorAll('.tool-btn[data-tooltip], .mode-toggle-btn[data-tooltip]');
+  buttons.forEach(btn => {
+    if (btn.querySelector('.tooltip-text')) return; // already initialized
+    const text = btn.getAttribute('data-tooltip');
+    if (!text) return;
+
+    const tooltipText = document.createElement('span');
+    tooltipText.className = 'tooltip-text';
+    tooltipText.textContent = text;
+    btn.appendChild(tooltipText);
+
+    const tooltipArrow = document.createElement('span');
+    tooltipArrow.className = 'tooltip-arrow';
+    btn.appendChild(tooltipArrow);
+  });
+}
+
 export function updateActiveTool(activeBtn) {
   elements.toolButtons.forEach(btn => btn.classList.remove('active'));
   activeBtn.classList.add('active');
