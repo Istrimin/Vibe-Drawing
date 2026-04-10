@@ -80,18 +80,6 @@ export function createRightToolbar() {
         <button id="gridTransformPermBtn" data-mode="permanent">Permanent</button>
     `;
     rightToolbar.appendChild(transformGroup);
-
-    // Symmetry line toggle
-    const symmetryGroup = document.createElement('div');
-    symmetryGroup.className = 'tool-group';
-    symmetryGroup.innerHTML = `
-        <div class="tool-setting" style="padding: 4px 2px;">
-            <label style="font-size: 9px; color: #999;">
-                <input type="checkbox" id="showSymmetryLineCb" checked> Sym Line
-            </label>
-        </div>
-    `;
-    rightToolbar.appendChild(symmetryGroup);
 }
 
 function getFullscreenSVG() {

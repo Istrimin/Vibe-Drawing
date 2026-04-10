@@ -399,8 +399,17 @@ function setupEventListeners() {
   elements.brushColorPicker.addEventListener('change', (e) => {
     state.drawingColor = e.target.value;
     updateColorIndicator();
-    // Remove active class from color swatches when using native picker
-    elements.colorPalette.querySelectorAll('.color-swatch').forEach(btn => btn.classList.remove('active'));
+    // Update active swatch color and remove active from others
+    elements.colorPalette.querySelectorAll('.color-swatch').forEach(btn => {
+      btn.classList.remove('active');
+    });
+    // Update the visually active swatch to reflect new color
+    const activeSwatch = elements.colorPalette.querySelector('.color-swatch.active');
+    if (activeSwatch) {
+      activeSwatch.style.backgroundColor = e.target.value;
+      activeSwatch.dataset.color = e.target.value;
+      activeSwatch.classList.add('active');
+    }
   });
 
   // Color Palette
@@ -734,8 +743,6 @@ function setupTimelineControls() {
         state.gridCells = [];
         state.selectedImage = null;
         state.selectedObjects = [];
-        state.zoomLevel = 1;
-        state.panOffset = { x: 0, y: 0 };
       } else if (frame <= state.undoStack.length) {
         const frameState = state.undoStack[frame - 1];
         if (frameState) {
@@ -744,8 +751,7 @@ function setupTimelineControls() {
           state.gridCells = JSON.parse(JSON.stringify(frameState.gridCells));
           state.selectedImage = frameState.selectedImage;
           state.selectedObjects = JSON.parse(JSON.stringify(frameState.selectedObjects));
-          state.zoomLevel = frameState.zoomLevel;
-          state.panOffset = { ...frameState.panOffset };
+          // Don't restore zoom/pan - keep user's current view
         }
       }
       
@@ -814,6 +820,12 @@ function updateTimelineUI(currentFrame = null, totalFrames = null) {
   if (timelineSpeedBtn) {
     timelineSpeedBtn.textContent = playbackState.speed + 'x';
   }
+
+  // Update undo/redo count badges
+  const undoCount = document.getElementById('undoCount');
+  const redoCount = document.getElementById('redoCount');
+  if (undoCount) undoCount.textContent = state.currentHistoryIndex + 1;
+  if (redoCount) redoCount.textContent = state.redoStack.length;
 }
 
 function togglePlayback() {
@@ -1875,3 +1887,6 @@ function exportAsImage() {
 
 // --- App Initialization ---
 document.addEventListener('DOMContentLoaded', init);
+
+
+
