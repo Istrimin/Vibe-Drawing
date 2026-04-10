@@ -44,16 +44,7 @@ function clearCanvas() {
 function drawGrid() {
   if (!state.showGrid || !state.ctx) return;
 
-  state.ctx.save();
-
-  state.ctx.strokeStyle = state.gridColor;
-  state.ctx.lineWidth = 0.5 / state.zoomLevel; // Adjust for zoom
-
-  // Use effective grid size (accounts for upscale if defined)
-  const gridUpscale = state.gridUpscale || 1;
-  const effectiveGridSize = state.gridSize * gridUpscale;
-
-  // Calculate visible area in world coordinates (already transformed by redrawCanvas)
+  // Calculate visible area in world coordinates
   const visibleWidth = state.canvas.width / state.zoomLevel;
   const visibleHeight = state.canvas.height / state.zoomLevel;
   const startX = -state.panOffset.x / state.zoomLevel;
@@ -61,7 +52,23 @@ function drawGrid() {
   const endX = startX + visibleWidth;
   const endY = startY + visibleHeight;
 
-  // Draw vertical lines - infinite in both directions
+  // Use effective grid size (accounts for upscale if defined)
+  const gridUpscale = state.gridUpscale || 1;
+  let effectiveGridSize = state.gridSize * gridUpscale;
+
+  // Limit grid lines to prevent performance issues at low zoom
+  const maxGridLines = 500;
+  const gridLineCount = Math.ceil(visibleWidth / effectiveGridSize) + Math.ceil(visibleHeight / effectiveGridSize);
+  if (gridLineCount > maxGridLines) {
+    // Increase grid size to keep line count reasonable
+    effectiveGridSize *= Math.ceil(gridLineCount / maxGridLines);
+  }
+
+  state.ctx.save();
+  state.ctx.strokeStyle = state.gridColor;
+  state.ctx.lineWidth = 0.5 / state.zoomLevel;
+
+  // Draw vertical lines
   const firstVerticalLine = Math.floor(startX / effectiveGridSize) * effectiveGridSize;
   const lastVerticalLine = Math.ceil(endX / effectiveGridSize) * effectiveGridSize;
 
@@ -72,7 +79,7 @@ function drawGrid() {
     state.ctx.stroke();
   }
 
-  // Draw horizontal lines - infinite in both directions
+  // Draw horizontal lines
   const firstHorizontalLine = Math.floor(startY / effectiveGridSize) * effectiveGridSize;
   const lastHorizontalLine = Math.ceil(endY / effectiveGridSize) * effectiveGridSize;
 
@@ -236,8 +243,7 @@ function drawSymmetryLines() {
   // Always draw symmetry line based on current mode, even if 'off' show a vertical guide
   const modeToDraw = state.symmetry.mode !== 'off' ? state.symmetry.mode : 'vertical';
 
-  console.log('[DEBUG drawSymmetryLines] showSymmetryLine:', state.showSymmetryLine, 'mode:', state.symmetry.mode, 'modeToDraw:', modeToDraw);
-
+  
   const { ctx, canvas, zoomLevel, panOffset } = state;
 
   // Calculate visible area in world coordinates

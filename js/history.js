@@ -150,9 +150,8 @@ export function startPlayback(callback) {
             state.gridCells = JSON.parse(JSON.stringify(frameState.gridCells));
             state.selectedImage = frameState.selectedImage;
             state.selectedObjects = JSON.parse(JSON.stringify(frameState.selectedObjects));
-            state.zoomLevel = frameState.zoomLevel;
-            state.panOffset = { ...frameState.panOffset };
             state.selectionTool = frameState.selectionTool;
+            // Don't restore zoom/pan during playback - keep user's view
 
             // Redraw canvas with new state
             if (window.redrawCanvas) {

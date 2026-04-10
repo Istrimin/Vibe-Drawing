@@ -219,17 +219,28 @@ function setupEventListeners() {
   });
   
   // Undo/Redo buttons
-  const undoBtn = document.getElementById('undoBtn');
+  // Update UI after undo/redo to restore tool button and cursor
+function updateUndoRedoUI() {
+  const toolBtn = document.querySelector(`.tool-btn[data-tool="${state.selectionTool}"]`);
+  if (toolBtn) {
+    updateActiveTool(toolBtn);
+  }
+  updateCursorForTool(state.selectionTool);
+}
+
+const undoBtn = document.getElementById('undoBtn');
   const redoBtn = document.getElementById('redoBtn');
   if (undoBtn) {
     undoBtn.addEventListener('click', () => {
       undo();
+      updateUndoRedoUI();
       updateStatusBar('Undo');
     });
   }
   if (redoBtn) {
     redoBtn.addEventListener('click', () => {
       redo();
+      updateUndoRedoUI();
       updateStatusBar('Redo');
     });
   }
@@ -256,6 +267,7 @@ function setupEventListeners() {
 
   // Make redrawCanvas available globally for history functions
   window.redrawCanvas = redrawCanvas;
+  window.updateUndoRedoUI = updateUndoRedoUI;
   elements.backgroundColorPicker.addEventListener('input', (e) => {
     state.backgroundColor = e.target.value;
     redrawCanvas();
