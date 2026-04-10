@@ -1,138 +1,199 @@
 /**
- * Tasks Module — работа с файлом сделать.txt
- * Автоматическое сохранение изменений
+ * Tasks Module — простой список задач
+ * Хранит данные в localStorage, без диалогов выбора файлов
  */
 
-let fileHandle = null;
-let tasksTextarea = null;
-let tasksBtn = null;
-let tasksDialog = null;
-let autoSaveTimer = null;
-const AUTO_SAVE_DELAY = 2000; // 2 секунды после последнего изменения
+const TASKS_STORAGE_KEY = 'vibeDrawingTasks';
 const TASKS_FILE_NAME = 'сделать.txt';
 
+let tasksBtn = null;
+let tasksPanel = null;
+let tasksTextarea = null;
+let tasksCloseBtn = null;
+let tasksExportBtn = null;
+let tasksImportBtn = null;
+
 export function initTasks() {
-    tasksTextarea = document.getElementById('tasksTextarea');
     tasksBtn = document.getElementById('tasksBtn');
-    tasksDialog = document.getElementById('tasksDialog');
+    tasksPanel = document.getElementById('tasksPanel');
+    tasksTextarea = document.getElementById('tasksTextarea');
+    tasksCloseBtn = document.getElementById('tasksCloseBtn');
+    tasksExportBtn = document.getElementById('tasksExportBtn');
+    tasksImportBtn = document.getElementById('tasksImportBtn');
 
     if (!tasksBtn) {
         console.warn('Tasks button not found');
         return;
     }
 
-    // Открытие диалога
-    tasksBtn.addEventListener('click', async () => {
-        tasksDialog.classList.remove('hidden');
-        await loadTasks();
+    // Создаём панель если её нет
+    if (!tasksPanel) {
+        createTasksPanel();
+    }
+
+    // Открытие панели
+    tasksBtn.addEventListener('click', () => {
+        tasksPanel.style.display = tasksPanel.style.display === 'none' || tasksPanel.style.display === '' ? 'block' : 'none';
+        if (tasksPanel.style.display === 'block') {
+            loadTasks();
+        }
     });
 
     // Закрытие
-    const closeBtn = document.getElementById('tasksCloseBtn');
-    if (closeBtn) {
-        closeBtn.addEventListener('click', () => {
-            tasksDialog.classList.add('hidden');
-            stopAutoSave();
+    if (tasksCloseBtn) {
+        tasksCloseBtn.addEventListener('click', () => {
+            tasksPanel.style.display = 'none';
         });
     }
 
-    // Загрузка файла
-    const loadBtn = document.getElementById('tasksLoadBtn');
-    if (loadBtn) {
-        loadBtn.addEventListener('click', async () => {
-            await loadTasks();
+    // Экспорт в файл
+    if (tasksExportBtn) {
+        tasksExportBtn.addEventListener('click', () => {
+            downloadTasksFile();
         });
     }
 
-    // Сохранение файла
-    const saveBtn = document.getElementById('tasksSaveBtn');
-    if (saveBtn) {
-        saveBtn.addEventListener('click', async () => {
-            await saveTasks();
+    // Импорт из файла
+    if (tasksImportBtn) {
+        tasksImportBtn.addEventListener('click', () => {
+            const input = document.getElementById('tasksImportInput');
+            if (input) input.click();
         });
+
+        const fileInput = document.getElementById('tasksImportInput');
+        if (fileInput) {
+            fileInput.addEventListener('change', (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = (ev) => {
+                    tasksTextarea.value = ev.target.result;
+                    saveTasks();
+                    fileInput.value = '';
+                };
+                reader.readAsText(file);
+            });
+        }
     }
 
-    // Автосохранение при изменении textarea
+    // Автосохранение при вводе
     if (tasksTextarea) {
         tasksTextarea.addEventListener('input', () => {
-            scheduleAutoSave();
+            saveTasks();
         });
     }
 
-    // Закрытие по клику вне диалога
-    if (tasksDialog) {
-        tasksDialog.addEventListener('click', (e) => {
-            if (e.target === tasksDialog) {
-                tasksDialog.classList.add('hidden');
-                stopAutoSave();
+    // Закрытие по клику вне панели
+    if (tasksPanel) {
+        tasksPanel.addEventListener('click', (e) => {
+            if (e.target === tasksPanel) {
+                tasksPanel.style.display = 'none';
             }
         });
     }
 }
 
-async function loadTasks() {
-    try {
-        // Пробуем File System Access API
-        if ('showOpenFilePicker' in window) {
-            try {
-                [fileHandle] = await window.showOpenFilePicker({
-                    types: [{
-                        description: 'Text Files',
-                        accept: { 'text/*': ['.txt', '.md'] }
-                    }],
-                    multiple: false
-                });
-                const file = await fileHandle.getFile();
-                const text = await file.text();
-                tasksTextarea.value = text;
-                tasksTextarea.dataset.filePath = fileHandle.name;
-                updateStatus('Файл загружен: ' + fileHandle.name);
-                startAutoSave();
-                return;
-            } catch (e) {
-                if (e.name === 'AbortError') return; // пользователь отменил
-                console.warn('File picker failed, trying fallback:', e);
-            }
-        }
+function createTasksPanel() {
+    const app = document.getElementById('app');
+    if (!app) return;
 
-        // Fallback: пробуем загрузить с сервера
-        const response = await fetch('js/' + TASKS_FILE_NAME);
-        if (response.ok) {
-            const text = await response.text();
-            tasksTextarea.value = text;
-            updateStatus('Файл загружен с сервера');
+    tasksPanel = document.createElement('div');
+    tasksPanel.id = 'tasksPanel';
+    tasksPanel.className = 'tasks-panel';
+    tasksPanel.style.display = 'none';
+
+    tasksPanel.innerHTML = `
+        <div class="tasks-panel-header">
+            <h3>📋 Tasks</h3>
+            <div class="tasks-panel-actions">
+                <button id="tasksExportBtn" title="Export to file">📤 Export</button>
+                <button id="tasksImportBtn" title="Import from file">📥 Import</button>
+                <input type="file" id="tasksImportInput" accept=".txt,.md" style="display:none">
+                <button id="tasksCloseBtn" class="close-btn" title="Close">&times;</button>
+            </div>
+        </div>
+        <textarea id="tasksTextarea" placeholder="Write your tasks here..." spellcheck="false"></textarea>
+    `;
+
+    app.appendChild(tasksPanel);
+
+    // Re-query elements after injection
+    tasksTextarea = document.getElementById('tasksTextarea');
+    tasksCloseBtn = document.getElementById('tasksCloseBtn');
+    tasksExportBtn = document.getElementById('tasksExportBtn');
+    tasksImportBtn = document.getElementById('tasksImportBtn');
+
+    // Re-bind events for dynamically created elements
+    tasksCloseBtn.addEventListener('click', () => {
+        tasksPanel.style.display = 'none';
+    });
+
+    tasksExportBtn.addEventListener('click', () => {
+        downloadTasksFile();
+    });
+
+    tasksImportBtn.addEventListener('click', () => {
+        const input = document.getElementById('tasksImportInput');
+        if (input) input.click();
+    });
+
+    const fileInput = document.getElementById('tasksImportInput');
+    if (fileInput) {
+        fileInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (ev) => {
+                tasksTextarea.value = ev.target.result;
+                saveTasks();
+                fileInput.value = '';
+            };
+            reader.readAsText(file);
+        });
+    }
+
+    tasksTextarea.addEventListener('input', () => {
+        saveTasks();
+    });
+}
+
+function loadTasks() {
+    try {
+        const saved = localStorage.getItem(TASKS_STORAGE_KEY);
+        if (saved !== null) {
+            tasksTextarea.value = saved;
         } else {
-            tasksTextarea.value = '📝 Дбавить кнопку открывающуюю этот файл для редактирования прямо в окне.\n\n';
-            updateStatus('Создан новый список задач');
+            // Попробуем загрузить с сервера
+            fetch('js/' + TASKS_FILE_NAME)
+                .then(r => r.ok ? r.text() : null)
+                .then(text => {
+                    if (text) {
+                        tasksTextarea.value = text;
+                        saveTasks();
+                    } else {
+                        tasksTextarea.value = '';
+                    }
+                })
+                .catch(() => {
+                    tasksTextarea.value = '';
+                });
         }
-    } catch (err) {
-        console.error('Load tasks error:', err);
-        tasksTextarea.value = 'Ошибка загрузки. Проверьте консоль.';
+    } catch (e) {
+        console.error('Load tasks error:', e);
+        tasksTextarea.value = '';
     }
 }
 
-async function saveTasks() {
-    const content = tasksTextarea.value;
-
+function saveTasks() {
     try {
-        // Если есть fileHandle — сохраняем через него
-        if (fileHandle && 'createWritable' in fileHandle) {
-            const writable = await fileHandle.createWritable();
-            await writable.write(content);
-            await writable.close();
-            updateStatus('Сохранено в ' + fileHandle.name);
-            return;
-        }
-
-        // Fallback: скачивание
-        downloadFile(content);
-    } catch (err) {
-        console.error('Save tasks error:', err);
-        downloadFile(content);
+        localStorage.setItem(TASKS_STORAGE_KEY, tasksTextarea.value);
+    } catch (e) {
+        console.error('Save tasks error:', e);
     }
 }
 
-function downloadFile(content) {
+function downloadTasksFile() {
+    const content = tasksTextarea.value;
     const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -142,53 +203,6 @@ function downloadFile(content) {
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
-    updateStatus('Файл скачан (нет доступа к ФС)');
-}
-
-function startAutoSave() {
-    stopAutoSave();
-    autoSaveTimer = setInterval(async () => {
-        if (fileHandle && tasksDialog.classList.contains('hidden') === false) {
-            try {
-                const writable = await fileHandle.createWritable();
-                await writable.write(tasksTextarea.value);
-                await writable.close();
-            } catch (e) {
-                console.warn('Auto-save failed:', e);
-            }
-        }
-    }, 60000); // каждую минуту
-}
-
-function stopAutoSave() {
-    if (autoSaveTimer) {
-        clearInterval(autoSaveTimer);
-        autoSaveTimer = null;
-    }
-}
-
-function scheduleAutoSave() {
-    // Сохраняем через 2 сек после последнего изменения
-    clearTimeout(autoSaveTimer);
-    autoSaveTimer = setTimeout(async () => {
-        if (fileHandle) {
-            try {
-                const writable = await fileHandle.createWritable();
-                await writable.write(tasksTextarea.value);
-                await writable.close();
-                updateStatus('Автосохранение ✓');
-            } catch (e) {
-                console.warn('Auto-save failed:', e);
-            }
-        }
-    }, AUTO_SAVE_DELAY);
-}
-
-function updateStatus(msg) {
-    const status = document.getElementById('toolStatus');
-    if (status) {
-        status.textContent = '📋 ' + msg;
-    }
 }
 
 export function getTasksContent() {
@@ -198,6 +212,6 @@ export function getTasksContent() {
 export function setTasksContent(content) {
     if (tasksTextarea) {
         tasksTextarea.value = content;
-        scheduleAutoSave();
+        saveTasks();
     }
 }

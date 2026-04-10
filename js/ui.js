@@ -4,7 +4,7 @@ import { clearCanvas } from './canvas.js';
 
 // Initialize custom tooltips for all buttons with data-tooltip
 export function initTooltips() {
-  const buttons = document.querySelectorAll('.tool-btn[data-tooltip], .mode-toggle-btn[data-tooltip]');
+  const buttons = document.querySelectorAll('.tool-btn[data-tooltip], .mode-toggle-btn[data-tooltip], .timeline-btn[data-tooltip]');
   buttons.forEach(btn => {
     if (btn.querySelector('.tooltip-text')) return; // already initialized
     const text = btn.getAttribute('data-tooltip');
@@ -18,6 +18,21 @@ export function initTooltips() {
     const tooltipArrow = document.createElement('span');
     tooltipArrow.className = 'tooltip-arrow';
     btn.appendChild(tooltipArrow);
+
+    // Update tooltip position on hover
+    btn.addEventListener('mouseenter', () => {
+      const rect = btn.getBoundingClientRect();
+      const tt = btn.querySelector('.tooltip-text');
+      const ta = btn.querySelector('.tooltip-arrow');
+      if (tt) {
+        tt.style.left = (rect.left + rect.width / 2) + 'px';
+        tt.style.bottom = (window.innerHeight - rect.top + 8) + 'px';
+      }
+      if (ta) {
+        ta.style.left = (rect.left + rect.width / 2) + 'px';
+        ta.style.bottom = (window.innerHeight - rect.top + 3) + 'px';
+      }
+    });
   });
 }
 

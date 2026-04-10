@@ -92,8 +92,8 @@ export function initializeElements() {
   elements.eraserSizeValue = document.getElementById('eraserSizeValue');
   elements.gridBrushSizeSlider = document.getElementById('gridBrushSizeSlider');
   elements.gridBrushSizeValue = document.getElementById('gridBrushSizeValue');
-  elements.rightGridBrushSlider = null; // removed, use gridBrushSizeSlider instead
-  elements.rightGridBrushValue = null; // removed
+  elements.rightGridBrushSlider = document.getElementById('rightGridBrushSlider');
+  elements.rightGridBrushValue = document.getElementById('rightGridBrushValue');
   elements.gridSizeInputTop = document.getElementById('gridSizeInputTop');
   elements.gridSizeValueTop = document.getElementById('gridSizeValueTop');
   elements.upscaleBtn = document.getElementById('upscaleBtn');
@@ -127,12 +127,6 @@ export function initializeElements() {
   elements.autoSaveDialogClose = document.getElementById('autoSaveDialogClose');
   elements.gridBtn = document.getElementById('gridBtn');
   elements.tasksBtn = document.getElementById('tasksBtn');
-  elements.tasksDialog = document.getElementById('tasksDialog');
-  elements.tasksTextarea = document.getElementById('tasksTextarea');
-  elements.tasksLoadBtn = document.getElementById('tasksLoadBtn');
-  elements.tasksSaveBtn = document.getElementById('tasksSaveBtn');
-  elements.tasksCloseBtn = document.getElementById('tasksCloseBtn');
-  elements.tasksFileInput = document.getElementById('tasksFileInput');
   elements.devToolsBtn = document.getElementById('devToolsBtn');
   elements.changeCursorBtn = document.getElementById('changeCursorBtn');
   elements.autoSaveBtn = document.getElementById('autoSaveBtn');

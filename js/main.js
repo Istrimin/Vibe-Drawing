@@ -9,6 +9,10 @@ import { undo, redo, saveState, startPlayback, stopPlayback, pausePlayback, resu
 import { scaleBy2x } from './upscale.js';
 import { initTasks } from './tasks.js';
 import { setupExportPanel } from './export.js';
+import { createTopToolbar } from './buttons-top.js';
+import { createLeftToolbar } from './buttons-left.js';
+import { createRightToolbar } from './buttons-right.js';
+import { createTimelineControls } from './buttons-timeline.js';
 
 // Throttled redraw using requestAnimationFrame to prevent excessive redraws
 let redrawScheduled = false;
@@ -32,9 +36,20 @@ function buildGridCellsSet() {
 
 // Initialize the application
 function init() {
+  // Create UI buttons from JS modules (instead of HTML)
+  createTopToolbar();
+  createLeftToolbar();
+  createRightToolbar();
+  createTimelineControls();
+
   initializeElements();
   setupCanvas();
   initCursors();
+
+  // Re-query toolButtons after dynamic buttons are created
+  elements.toolButtons = document.querySelectorAll('.tool-btn');
+
+  // Init tooltips after all buttons are created (including dynamic ones)
   initTooltips();
   
   // Center the view FIRST - before setupUI and loadState
