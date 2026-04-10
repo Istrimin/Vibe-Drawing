@@ -22,9 +22,9 @@ export function createTopToolbar() {
     colorSetting.className = 'tool-setting-horizontal no-mode';
     colorSetting.innerHTML = `
         <label for="brushColorPicker">Color</label>
-        <input type="color" id="brushColorPicker" value="#ffffff" data-tooltip="Brush Color">
+        <input type="color" id="brushColorPicker" value="#ffffff" title="Brush Color">
         <div id="colorPalette" class="color-palette-container"></div>
-        <input type="color" id="swatchColorPicker" style="position: absolute; visibility: hidden; width: 0; height: 0;" data-tooltip="">
+        <input type="color" id="swatchColorPicker" style="position: absolute; visibility: hidden; width: 0; height: 0;" title="">
     `;
     topToolbar.appendChild(colorSetting);
 
@@ -46,7 +46,7 @@ export function createTopToolbar() {
         const swatch = document.createElement('button');
         swatch.className = 'color-swatch' + (i === 0 ? ' active' : '');
         swatch.dataset.color = c.color;
-        swatch.dataset.tooltip = c.tooltip;
+        swatch.title = c.tooltip;
         swatch.style.backgroundColor = c.color;
         palette.appendChild(swatch);
     });
@@ -94,6 +94,6 @@ export function createTopToolbar() {
     // 2x upscale
     const upscale = document.createElement('div');
     upscale.className = 'tool-setting-horizontal setting-grid';
-    upscale.innerHTML = `<button id="upscaleBtn" data-tooltip="Увеличить рисунок в 2 раза">2x</button>`;
+    upscale.innerHTML = `<button id="upscaleBtn" title="Увеличить рисунок в 2 раза">2x</button>`;
     topToolbar.appendChild(upscale);
 }

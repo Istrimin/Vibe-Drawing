@@ -31,6 +31,7 @@ export const state = {
   gridType: 'square',
   gridColor: '#006400',
   backgroundColor: '#2d2d2d',
+  saveBackground: false,
   spacebarDown: false,
   altKeyDown: false,
   previousTool: 'pencil',

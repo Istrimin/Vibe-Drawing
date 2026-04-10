@@ -30,8 +30,12 @@ export function exportImage() {
   exportCanvas.width = exportWidth;
   exportCanvas.height = exportHeight;
 
-  exportCtx.fillStyle = state.backgroundColor;
-  exportCtx.fillRect(0, 0, exportCanvas.width, exportCanvas.height);
+  // Fill background only if option is enabled
+  const saveBg = window.shouldSaveBackground && window.shouldSaveBackground();
+  if (saveBg) {
+    exportCtx.fillStyle = state.backgroundColor;
+    exportCtx.fillRect(0, 0, exportCanvas.width, exportCanvas.height);
+  }
 
   exportCtx.save();
   if (scale !== 1) {

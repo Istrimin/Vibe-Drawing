@@ -318,44 +318,6 @@ html, body {
 #right-toolbar .tool-btn { width: 31px; height: 31px; }
 .timeline-controls .tool-btn svg { width: 12px; height: 12px; }
 
-/* Custom tooltips - always appear to the LEFT of the button */
-.tool-btn .tooltip-text {
-    visibility: hidden;
-    opacity: 0;
-    position: fixed;
-    top: 50%;
-    transform: translateY(-50%);
-    padding: 5px 8px;
-    background: #0a0a0a;
-    color: #eee;
-    font-size: 11px;
-    white-space: nowrap;
-    border-radius: 4px;
-    border: 1px solid #555;
-    pointer-events: none;
-    transition: opacity 0.12s ease, visibility 0.12s ease;
-    z-index: 99999;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.5);
-    font-weight: 500;
-}
-.tool-btn .tooltip-arrow {
-    visibility: hidden;
-    opacity: 0;
-    position: fixed;
-    top: 50%;
-    transform: translateY(-50%);
-    border: 5px solid transparent;
-    border-left-color: #0a0a0a;
-    pointer-events: none;
-    transition: opacity 0.12s ease, visibility 0.12s ease;
-    z-index: 99999;
-}
-.tool-btn:hover .tooltip-text,
-.tool-btn:hover .tooltip-arrow {
-    visibility: visible;
-    opacity: 1;
-}
-
 /* Upscale button */
 .upscale-btn {
     width: 31px;
@@ -647,6 +609,53 @@ input#backgroundColorPicker { width: 24px; height: 24px; }
 .tasks-panel textarea:focus {
     outline: none;
     background: #0a0a0a;
+}
+
+
+/* --- OPTIONS PANEL --- */
+.options-panel {
+    position: absolute;
+    top: 50px;
+    left: 60px;
+    width: 260px;
+    background: #1e1e1e;
+    border: 1px solid #333;
+    border-radius: 8px;
+    z-index: 2010;
+    display: none;
+    flex-direction: column;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+    overflow: hidden;
+}
+.options-panel-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 12px;
+    border-bottom: 1px solid #333;
+    background: #252525;
+}
+.options-panel-header h3 {
+    margin: 0;
+    font-size: 13px;
+    color: #eee;
+}
+.options-list {
+    padding: 12px;
+}
+.option-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    font-size: 13px;
+    color: #ccc;
+}
+.option-item input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+    accent-color: #7b61ff;
 }
 
 

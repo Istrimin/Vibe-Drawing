@@ -2,42 +2,6 @@ import { elements, state } from './state.js';
 import { redrawCanvas } from './canvas.js';
 import { clearCanvas } from './canvas.js';
 
-// Initialize custom tooltips for all buttons with data-tooltip
-export function initTooltips() {
-  const buttons = document.querySelectorAll('.tool-btn[data-tooltip], .mode-toggle-btn[data-tooltip], .timeline-btn[data-tooltip]');
-  buttons.forEach(btn => {
-    if (btn.querySelector('.tooltip-text')) return; // already initialized
-    const text = btn.getAttribute('data-tooltip');
-    if (!text) return;
-
-    const tooltipText = document.createElement('span');
-    tooltipText.className = 'tooltip-text';
-    tooltipText.textContent = text;
-    btn.appendChild(tooltipText);
-
-    const tooltipArrow = document.createElement('span');
-    tooltipArrow.className = 'tooltip-arrow';
-    btn.appendChild(tooltipArrow);
-
-    // Update tooltip position on hover
-    btn.addEventListener('mouseenter', () => {
-      const rect = btn.getBoundingClientRect();
-      const tt = btn.querySelector('.tooltip-text');
-      const ta = btn.querySelector('.tooltip-arrow');
-      if (tt) {
-        tt.style.top = (rect.top + rect.height / 2) + 'px';
-        tt.style.right = (window.innerWidth - rect.left + 8) + 'px';
-        tt.style.left = 'auto';
-      }
-      if (ta) {
-        ta.style.top = (rect.top + rect.height / 2) + 'px';
-        ta.style.right = (window.innerWidth - rect.left + 3) + 'px';
-        ta.style.left = 'auto';
-      }
-    });
-  });
-}
-
 export function updateActiveTool(activeBtn) {
   elements.toolButtons.forEach(btn => btn.classList.remove('active'));
   activeBtn.classList.add('active');

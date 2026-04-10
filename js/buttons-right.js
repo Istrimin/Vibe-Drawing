@@ -11,22 +11,22 @@ export function createRightToolbar() {
     const viewGroup = document.createElement('div');
     viewGroup.className = 'tool-group';
     viewGroup.innerHTML = `
-        <button class="tool-btn" id="fullscreenBtn" data-tooltip="Fullscreen (F)">
+        <button class="tool-btn" id="fullscreenBtn" title="Fullscreen (F)">
             ${getFullscreenSVG()}
         </button>
-        <button class="tool-btn" id="devToolsBtn" data-tooltip="Dev Tools">
+        <button class="tool-btn" id="devToolsBtn" title="Dev Tools">
             ${getDevToolsSVG()}
         </button>
-        <button class="tool-btn" id="autoSaveBtn" data-tooltip="Auto Save">
+        <button class="tool-btn" id="autoSaveBtn" title="Auto Save">
             ${getAutoSaveSVG()}
         </button>
-        <button class="tool-btn" id="zoomInBtn" data-tooltip="Zoom In (+)">
+        <button class="tool-btn" id="zoomInBtn" title="Zoom In (+)">
             ${getZoomInSVG()}
         </button>
-        <button class="tool-btn" id="zoomOutBtn" data-tooltip="Zoom Out (-)">
+        <button class="tool-btn" id="zoomOutBtn" title="Zoom Out (-)">
             ${getZoomOutSVG()}
         </button>
-        <button class="tool-btn" id="fitBtn" data-tooltip="Fit to Screen">
+        <button class="tool-btn" id="fitBtn" title="Fit to Screen">
             ${getFitSVG()}
         </button>
     `;
@@ -36,7 +36,7 @@ export function createRightToolbar() {
     const gridGroup = document.createElement('div');
     gridGroup.className = 'tool-group';
     gridGroup.innerHTML = `
-        <button class="tool-btn active" id="gridBtn" data-tooltip="Toggle Grid" data-active="true">
+        <button class="tool-btn active" id="gridBtn" title="Toggle Grid" data-active="true">
             ${getGridSVG()}
         </button>
         <div class="tool-setting">
@@ -54,19 +54,19 @@ export function createRightToolbar() {
     const actionGroup = document.createElement('div');
     actionGroup.className = 'tool-group';
     actionGroup.innerHTML = `
-        <button class="tool-btn" id="clearCanvasBtn" data-tooltip="Clear">
+        <button class="tool-btn" id="clearCanvasBtn" title="Clear">
             ${getClearSVG()}
         </button>
-        <button class="tool-btn" id="deleteBtn" data-tooltip="Delete (Del)">
+        <button class="tool-btn" id="deleteBtn" title="Delete (Del)">
             ${getDeleteSVG()}
         </button>
-        <button class="tool-btn" id="saveBtn" data-tooltip="Save">
+        <button class="tool-btn" id="saveBtn" title="Save">
             ${getSaveSVG()}
         </button>
-        <button class="tool-btn" id="loadBtn" data-tooltip="Load">
+        <button class="tool-btn" id="loadBtn" title="Load">
             ${getLoadSVG()}
         </button>
-        <button class="tool-btn" id="exportBtn" data-tooltip="Export">
+        <button class="tool-btn" id="exportBtn" title="Export">
             ${getExportSVG()}
         </button>
     `;

@@ -1,13 +1,14 @@
 import { state, elements, initializeElements } from './state.js';
 import { redrawCanvas, setupCanvas, zoom, clearCanvas } from './canvas.js';
-import { updateActiveTool, updateStatusBar, toggleGrid, showDevTools, initTooltips } from './ui.js';
+import { updateActiveTool, updateStatusBar, toggleGrid, showDevTools } from './ui.js';
 
 import { floodFill } from './fill.js';
-import { initCursors, setPipetteCursor, setPencilCursor, setEraserCursor, resetCursor } from './cursors.js';
+import { initCursors, setPipetteCursor, setPencilCursor, setEraserCursor, setGridDrawCursor, resetCursor } from './cursors.js';
 import { getPathBoundingBox, doRectanglesIntersect, getCellsBetweenPoints } from './geometry.js';
 import { undo, redo, saveState, startPlayback, stopPlayback, pausePlayback, resumePlayback, setPlaybackSpeed, scrubToFrame, getPlaybackState, getHistoryLength } from './history.js';
 import { scaleBy2x } from './upscale.js';
 import { initTasks } from './tasks.js';
+import { initOptions, shouldSaveBackground } from './options.js';
 import { setupExportPanel } from './export.js';
 import { createTopToolbar } from './buttons-top.js';
 import { createLeftToolbar } from './buttons-left.js';
@@ -33,9 +34,6 @@ function init() {
 
   // Re-query toolButtons after dynamic buttons are created
   elements.toolButtons = document.querySelectorAll('.tool-btn');
-
-  // Init tooltips after all buttons are created (including dynamic ones)
-  initTooltips();
 
   // Keep view at origin (0,0) with zoom 1 by default
   state.panOffset.x = 0;
@@ -89,6 +87,7 @@ function init() {
 
   // Initialize modules
   initTasks();
+  initOptions();
   setupExportPanel();
 
   updateStatusBar('Ready');
@@ -142,7 +141,11 @@ function setupEventListeners() {
     handleCanvasMouseUp(e);
     // Also reset cursor on mouseleave
     if (!state.spacebarDown) {
-      resetCursor();
+      if (state.selectionTool === 'grid-draw') {
+        setGridDrawCursor();
+      } else {
+        resetCursor();
+      }
     }
   });
   elements.canvas.addEventListener('wheel', handleCanvasWheel, { passive: false });
@@ -269,6 +272,7 @@ function setupEventListeners() {
 
   // Make redrawCanvas available globally for history functions
   window.redrawCanvas = redrawCanvas;
+  window.shouldSaveBackground = shouldSaveBackground;
   elements.backgroundColorPicker.addEventListener('input', (e) => {
     state.backgroundColor = e.target.value;
     redrawCanvas();
@@ -574,7 +578,7 @@ function setupEventListeners() {
       } else if (state.selectionTool === 'pipette') {
         setPipetteCursor();
       } else if (state.selectionTool === 'grid-draw') {
-        elements.canvas.style.cursor = 'crosshair';
+        setGridDrawCursor();
       }
 
       updateStatusBar(`Tool: ${state.selectionTool}`);
@@ -597,7 +601,7 @@ function setupEventListeners() {
       } else if (state.selectionTool === 'pipette') {
         setPipetteCursor();
       } else if (state.selectionTool === 'grid-draw') {
-        elements.canvas.style.cursor = 'crosshair';
+        setGridDrawCursor();
       } else {
         resetCursor();
       }
@@ -642,7 +646,7 @@ function setupUI() {
 
   // Set initial cursor based on default tool (grid-draw is default)
   if (state.selectionTool === 'grid-draw') {
-    elements.canvas.style.cursor = 'crosshair';
+    setGridDrawCursor();
   } else if (state.selectionTool === 'pencil') {
     setPencilCursor();
   } else if (state.selectionTool === 'eraser') {
@@ -883,7 +887,12 @@ function handleCanvasMouseUp(e) {
     if (state.spacebarDown) {
       elements.canvas.style.cursor = 'grab';
     } else {
-      elements.canvas.style.cursor = 'default';
+      // Restore cursor based on current tool after panning
+      if (state.selectionTool === 'grid-draw') {
+        setGridDrawCursor();
+      } else {
+        resetCursor();
+      }
     }
   }
   if (state.isDrawing) {

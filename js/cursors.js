@@ -2,11 +2,12 @@
  * Cursor Management Module
  * Handles cursor selection and application
  */
-import { initTooltips } from './ui.js';
+import { state } from './state.js';
 
 // Cursor management state
 const cursorState = {
     currentCursor: 'auto',
+    customCursor: null,       // User-chosen cursor from panel (persists)
     cursorPanelVisible: false,
     availableCursors: []
 };
@@ -41,9 +42,10 @@ export function initCursors() {
 
     // Set initial cursor
     if (drawingCanvas) {
-        // Restore saved cursor
+        // Restore saved custom cursor
         const savedCursor = localStorage.getItem('vibeDrawingCursor');
         if (savedCursor) {
+            cursorState.customCursor = savedCursor;
             cursorState.currentCursor = savedCursor;
             drawingCanvas.style.cursor = savedCursor;
         } else {
@@ -58,7 +60,7 @@ function createCursorPanelUI() {
     const rightToolGroup = document.querySelector('#right-toolbar .tool-group');
     if (rightToolGroup) {
         const cursorBtnHTML = `
-            <button class="tool-btn" id="changeCursorBtn" data-tooltip="Change Cursor (C)">
+            <button class="tool-btn" id="changeCursorBtn" title="Change Cursor (C)">
                 <svg width="20" height="20" viewBox="0 0 24 24">
                     <defs>
                         <linearGradient id="cursorGrad" x1="0%" y1="0%" x2="100%" y2="100%">
@@ -72,17 +74,6 @@ function createCursorPanelUI() {
             </button>
         `;
         rightToolGroup.insertAdjacentHTML('beforeend', cursorBtnHTML);
-        // Initialize tooltip for the newly created button
-        const newBtn = document.getElementById('changeCursorBtn');
-        if (newBtn) {
-            const tooltipText = document.createElement('span');
-            tooltipText.className = 'tooltip-text';
-            tooltipText.textContent = 'Change Cursor (C)';
-            newBtn.appendChild(tooltipText);
-            const tooltipArrow = document.createElement('span');
-            tooltipArrow.className = 'tooltip-arrow';
-            newBtn.appendChild(tooltipArrow);
-        }
     } else {
         console.warn('Could not find right toolbar tool group for cursor button');
     }
@@ -229,17 +220,58 @@ function addCursorImage(cursorUrl, name) {
 }
 
 // Set the current cursor
-function setCursor(cursorValue) {
+function setCursor(cursorValue, save = true) {
     cursorState.currentCursor = cursorValue;
     if (drawingCanvas) {
         drawingCanvas.style.cursor = cursorValue;
     }
-    // Persist cursor choice
-    try { localStorage.setItem('vibeDrawingCursor', cursorValue); } catch(e) {}
+    // Persist cursor choice only when explicitly requested
+    if (save) {
+        try { localStorage.setItem('vibeDrawingCursor', cursorValue); } catch(e) {}
+    }
+}
+
+// Set pipette cursor for Alt key functionality (don't save)
+export function setPipetteCursor() {
+    if (cursorState.customCursor) {
+        setCursor(cursorState.customCursor, false);
+    } else {
+        const pipetteCursor = 'url(cursors/pipette32.png) 0 0, auto';
+        setCursor(pipetteCursor, false);
+    }
+}
+
+// Set pencil cursor for pencil tool (don't save)
+export function setPencilCursor() {
+    if (cursorState.customCursor) {
+        setCursor(cursorState.customCursor, false);
+    } else {
+        const pencilCursor = 'url(cursors/pencil.png) 0 0, auto';
+        setCursor(pencilCursor, false);
+    }
+}
+
+// Set eraser cursor for eraser tool (don't save)
+export function setEraserCursor() {
+    if (cursorState.customCursor) {
+        setCursor(cursorState.customCursor, false);
+    } else {
+        const eraserCursor = 'url(cursors/eraser.png) 0 0, auto';
+        setCursor(eraserCursor, false);
+    }
+}
+
+// Set grid-draw cursor (uses custom cursor if set)
+export function setGridDrawCursor() {
+    if (cursorState.customCursor) {
+        setCursor(cursorState.customCursor, false);
+    } else {
+        if (drawingCanvas) drawingCanvas.style.cursor = 'crosshair';
+    }
 }
 
 // Toggle cursor panel visibility
-function toggleCursorPanel() {
+export function toggleCursorPanel() {
     if (cursorPanel.style.display === 'none') {
         cursorPanel.style.display = 'block';
         cursorState.cursorPanelVisible = true;
@@ -249,29 +281,21 @@ function toggleCursorPanel() {
     }
 }
 
-
-
 // Get current cursor state
 export function getCurrentCursor() {
     return cursorState.currentCursor;
 }
 
-// Set pipette cursor for Alt key functionality
-export function setPipetteCursor() {
-    const pipetteCursor = 'url(cursors/pipette32.png) 0 0, auto';
-    setCursor(pipetteCursor);
+// Get custom cursor (for persistence check)
+export function getCustomCursor() {
+    return cursorState.customCursor;
 }
 
-// Set pencil cursor for pencil tool
-export function setPencilCursor() {
-    const pencilCursor = 'url(cursors/pencil.png) 0 0, auto';
-    setCursor(pencilCursor);
-}
-
-// Set eraser cursor for eraser tool
-export function setEraserCursor() {
-    const eraserCursor = 'url(cursors/eraser.png) 0 0, auto';
-    setCursor(eraserCursor);
+// Clear custom cursor and reset to default
+export function clearCustomCursor() {
+    cursorState.customCursor = null;
+    localStorage.removeItem('vibeDrawingCursor');
+    drawingCanvas.style.cursor = 'auto';
 }
 
 // Reset cursor to default (based on current tool)
@@ -279,15 +303,24 @@ export function resetCursor() {
     if (drawingCanvas) {
         // Import state dynamically to avoid circular dependency
         import('./state.js').then(({ state }) => {
-            // If Alt key is down, we should show pipette cursor
+            // If Alt key is down, show pipette cursor (never custom)
             if (state.altKeyDown) {
                 setPipetteCursor();
                 return;
             }
-            
+
+            // If user has a custom cursor, use it for drawing tools
+            if (cursorState.customCursor) {
+                const drawingTools = ['pencil', 'grid-draw', 'eraser'];
+                if (drawingTools.includes(state.selectionTool)) {
+                    drawingCanvas.style.cursor = cursorState.customCursor;
+                    return;
+                }
+            }
+
             // Get cursor based on current tool
             const toolCursor = getCursorForTool(state.selectionTool);
-            
+
             // Only set cursor if we have a specific tool cursor, otherwise use default
             if (toolCursor !== 'auto') {
                 drawingCanvas.style.cursor = toolCursor;

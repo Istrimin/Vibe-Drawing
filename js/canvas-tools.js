@@ -1,7 +1,7 @@
 import { state } from './state.js';
 import { redrawCanvas } from './canvas.js';
 import { updateStatusBar } from './ui.js';
-import { setPencilCursor, setEraserCursor, setPipetteCursor, resetCursor } from './cursors.js';
+import { setPencilCursor, setEraserCursor, setPipetteCursor, setGridDrawCursor, resetCursor } from './cursors.js';
 
 export function clearAllContent() {
   state.gridCells = [];
@@ -22,7 +22,7 @@ export function updateCursorForTool(tool) {
   } else if (tool === 'pipette') {
     setPipetteCursor();
   } else if (tool === 'grid-draw') {
-    if (canvas) canvas.style.cursor = 'crosshair';
+    setGridDrawCursor();
   } else {
     resetCursor();
   }

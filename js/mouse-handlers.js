@@ -2,7 +2,7 @@ import { state, elements } from './state.js';
 import { redrawCanvas } from './canvas.js';
 import { updateActiveTool, updateStatusBar } from './ui.js';
 import { floodFill } from './fill.js';
-import { setPencilCursor, setEraserCursor, setPipetteCursor, resetCursor } from './cursors.js';
+import { setPencilCursor, setEraserCursor, setPipetteCursor, setGridDrawCursor, resetCursor } from './cursors.js';
 import { getPathBoundingBox, doRectanglesIntersect, getCellsBetweenPoints } from './geometry.js';
 import { saveState } from './history.js';
 import { getImageAtPosition, isOnResizeHandle, isOnRotationHandle, getGridCellKey, buildGridCellsSet } from './image-utils.js';

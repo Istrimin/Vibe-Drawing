@@ -1,7 +1,7 @@
 import { state, elements } from './state.js';
 import { zoom, redrawCanvas } from './canvas.js';
 import { saveState } from './history.js';
-import { setPipetteCursor, setPencilCursor } from './cursors.js';
+import { setPipetteCursor, setPencilCursor, setGridDrawCursor, resetCursor } from './cursors.js';
 import { updateActiveTool } from './ui.js';
 import { 
   gridDrawStart, gridDrawMove, pencilDrawStart, pencilDrawMove, 
@@ -167,7 +167,16 @@ export function handleCanvasMouseUp(e) {
 
   if (state.isPanning) {
     state.isPanning = false;
-    elements.canvas.style.cursor = state.spacebarDown ? 'grab' : 'auto';
+    if (state.spacebarDown) {
+      if (elements.canvas) elements.canvas.style.cursor = 'grab';
+    } else {
+      // Restore cursor based on current tool after panning
+      if (state.selectionTool === 'grid-draw') {
+        setGridDrawCursor();
+      } else {
+        resetCursor();
+      }
+    }
   }
 }
 

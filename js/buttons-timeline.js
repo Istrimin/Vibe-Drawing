@@ -15,24 +15,24 @@ export function createTimelineControls() {
     }
 
     timelineControls.innerHTML = `
-        <button class="tool-btn" id="undoBtn" data-tooltip="Undo (Ctrl+Z)">
+        <button class="tool-btn" id="undoBtn" title="Undo (Ctrl+Z)">
             ${getUndoSVG()}
         </button>
-        <button class="tool-btn" id="redoBtn" data-tooltip="Redo (Ctrl+Y)">
+        <button class="tool-btn" id="redoBtn" title="Redo (Ctrl+Y)">
             ${getRedoSVG()}
         </button>
-        <button class="tool-btn" id="tasksBtn" data-tooltip="Tasks">
+        <button class="tool-btn" id="tasksBtn" title="Tasks">
             ${getTasksSVG()}
         </button>
-        <button class="tool-btn" id="exportImageBtn" data-tooltip="Export Image">
+        <button class="tool-btn" id="exportImageBtn" title="Export Image">
             ${getExportImageSVG()}
         </button>
-        <button class="timeline-btn" id="timelinePlayBtn" data-tooltip="Play/Pause">
+        <button class="timeline-btn" id="timelinePlayBtn" title="Play/Pause">
             ${getPlaySVG()}
         </button>
         <input type="range" id="timelineSlider" min="0" max="0" value="0" class="timeline-slider">
         <span id="timelineFrame">0/0</span>
-        <button class="timeline-btn" id="timelineSpeedBtn" data-tooltip="Playback Speed">
+        <button class="timeline-btn" id="timelineSpeedBtn" title="Playback Speed">
             ${getSpeedSVG()}
         </button>
     `;

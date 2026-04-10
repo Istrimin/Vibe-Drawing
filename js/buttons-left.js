@@ -11,7 +11,7 @@ export function createLeftToolbar() {
     const modeGroup = document.createElement('div');
     modeGroup.className = 'tool-group';
     modeGroup.innerHTML = `
-        <button id="modeToggleBtn" class="mode-toggle-btn active" data-tooltip="Mode: Grid (Q)">
+        <button id="modeToggleBtn" class="mode-toggle-btn active" title="Mode: Grid (Q)">
             <svg class="icon-grid" width="18" height="18" viewBox="0 0 24 24">
                 <defs>
                     <linearGradient id="gridGrad1" x1="0%" y1="0%" x2="100%" y2="100%">
@@ -65,7 +65,7 @@ export function createLeftToolbar() {
         const btn = document.createElement('button');
         btn.className = 'tool-btn' + (tool.active ? ' active' : '');
         btn.dataset.tool = tool.id;
-        btn.dataset.tooltip = tool.tooltip;
+        btn.title = tool.tooltip;
         btn.innerHTML = tool.svg;
         toolsGroup.appendChild(btn);
     });
@@ -76,10 +76,10 @@ export function createLeftToolbar() {
     const secondaryGroup = document.createElement('div');
     secondaryGroup.className = 'tool-group';
     secondaryGroup.innerHTML = `
-        <button class="tool-btn" id="symmetryBtn" data-tooltip="Symmetry (Y)">
+        <button class="tool-btn" id="symmetryBtn" title="Symmetry (Y)">
             ${getSymmetrySVG()}
         </button>
-        <button class="tool-btn" id="uploadBtn" data-tooltip="Upload Image">
+        <button class="tool-btn" id="uploadBtn" title="Upload Image">
             ${getUploadSVG()}
         </button>
         <input type="file" id="fileInput" accept="image/*" multiple style="display:none">
